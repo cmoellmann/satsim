@@ -9,7 +9,7 @@
 
 SatSim is a satellite simulator supporting development and automated testing of
 satellite on-board software, with a PUS-C (ECSS-E-ST-70-41C) TM/TC interface, a
-thin web frontend, and pluggable OBSW execution back-ends (in-process loopback,
+thin web frontend, and pluggable OBSW targets ('execution back-ends' in the accepted ADRs: in-process loopback,
 native process, instruction-level emulators: TSIM, TEMU/cOBC, QEMU).
 
 Criticality: **Category D** per ECSS-Q-ST-80C (software whose failure has
@@ -76,12 +76,12 @@ traceability matrix generated and committed, tag created, milestone checklist
 
 | MS | Content | Exit criteria |
 |---|---|---|
-| M0 | Walking skeleton: Maven build, CI, interface trio (`SimulationClock`, `EmulatorControl`, `SpaceLink`), loopback back-end implementing `EmulatorControl` (ADR-0006 C5), CRC + primary header codec | Build+CI green; V-anchors of ICD §7 pass; ≥1 traced test |
+| M0 | Walking skeleton: Maven build, CI, interface trio (`SimulationClock`, `EmulatorControl`, `SpaceLink`), loopback OBSW target implementing `EmulatorControl` (ADR-0006 C5), CRC + primary header codec | Build+CI green; V-anchors of ICD §7 pass; ≥1 traced test |
 | M1 | **Goal increment:** full TC(17,1)→TM(17,2) chain via web frontend; PUS-C TC/TM codecs against ICD §6 vectors; REST/WS API; determinism replay test (C6) | All ICD §6 vectors pass incl. negatives; manual frontend smoke test recorded; SRS M1-scope requirements all traced+passed |
 | M2 | ST[1] acceptance/completion reports; TCP length-framed space-packet link (ICD §8); ICD Issue 2 | ST[1] vectors added+passing; external client demo over TCP |
-| M3 | Native OBSW demo process (small C or Rust ST[17] responder) as second back-end | Same SVS validation suite green against native back-end unchanged |
+| M3 | Native OBSW demo process (small C or Rust ST[17] responder) as second OBSW target | Same SVS validation suite green against the native OBSW target unchanged |
 | M4 | Yamcs attachment trial (MDB for ST[17]/ST[1], TCP link) | TC/TM round-trip from Yamcs UI |
-| M5 | First emulator adapter: QEMU (license-free), `EmulatorControl` grant/consume sync (ADR-0006 C2/C3) | Validation suite green against QEMU back-end; sync conformance tests (SIM-REQ-TIME-xxx) pass |
+| M5 | First emulator adapter: QEMU (license-free), `EmulatorControl` grant/consume sync (ADR-0006 C2/C3) | Validation suite green against QEMU OBSW target; sync conformance tests (SIM-REQ-TIME-xxx) pass |
 
 Claude Code working rule: one milestone = one focused session scope; see CLAUDE.md.
 

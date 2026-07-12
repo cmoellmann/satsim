@@ -1,18 +1,16 @@
-package org.satsim.sim.backend;
+package org.satsim.sim.obsw;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.function.Consumer;
-import org.satsim.sim.link.SpaceLink;
 import org.satsim.sim.time.Consumed;
-import org.satsim.sim.time.EmulatorControl;
 import org.satsim.sim.time.StopReason;
 
 /**
- * In-process loopback back-end (ADR-0006 C5): implements the same
- * {@link EmulatorControl} and {@link SpaceLink} contracts as external
- * back-ends, so the grant/consume synchronization protocol is exercised from
- * the first increment [SIM-REQ-LINK-001, SIM-REQ-TIME-004].
+ * In-process loopback OBSW target (ADR-0006 C5): implements the same
+ * {@link ObswTarget} contract as external targets, so the grant/consume
+ * synchronization protocol is exercised from the first increment
+ * [SIM-REQ-LINK-001, SIM-REQ-TIME-004].
  *
  * <p>M0 behavior: each received TC is "processed" for a fixed simulated delay
  * and then echoed back verbatim as TM — a placeholder application; PUS ST[17]
@@ -21,9 +19,9 @@ import org.satsim.sim.time.StopReason;
  *
  * <p>Slave-local time only advances inside {@link #grant(long)}; TCs sent
  * between grants arrive at the current grant boundary. Not thread-safe: the
- * back-end is owned and driven solely by the time master (ADR-0006).
+ * target is owned and driven solely by the time master (ADR-0006).
  */
-public final class LoopbackBackend implements EmulatorControl, SpaceLink {
+public final class LoopbackTarget implements ObswTarget {
 
   private enum State { CREATED, INITIALIZED, HALTED }
 
@@ -42,7 +40,7 @@ public final class LoopbackBackend implements EmulatorControl, SpaceLink {
    * @param tcProcessingNanos simulated delay between TC arrival and TM
    *     emission, > 0
    */
-  public LoopbackBackend(long tcProcessingNanos) {
+  public LoopbackTarget(long tcProcessingNanos) {
     if (tcProcessingNanos <= 0) {
       throw new IllegalArgumentException("tcProcessingNanos must be > 0: " + tcProcessingNanos);
     }
@@ -52,7 +50,7 @@ public final class LoopbackBackend implements EmulatorControl, SpaceLink {
   @Override
   public void initialize() {
     if (state == State.HALTED) {
-      throw new IllegalStateException("back-end already shut down");
+      throw new IllegalStateException("target already shut down");
     }
     state = State.INITIALIZED;
   }
@@ -89,7 +87,7 @@ public final class LoopbackBackend implements EmulatorControl, SpaceLink {
   @Override
   public void sendTc(byte[] tcPacket) {
     if (state != State.INITIALIZED) {
-      throw new IllegalStateException("back-end not running: " + state);
+      throw new IllegalStateException("target not running: " + state);
     }
     pendingTcs.add(new PendingTc(localNanos + tcProcessingNanos, tcPacket.clone()));
   }

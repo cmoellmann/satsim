@@ -16,7 +16,7 @@
     (typically decided by an ADR).
   - **Reproducibility** — determinism/repeatability quality attribute.
   - **Configurability** — required adjustability without code change.
-  - **Portability** — invariance across execution back-ends/environments.
+  - **Portability** — invariance across OBSW targets/environments.
   - **Verifiability** — property enabling or enforcing verification (process
     constraint).
 
@@ -47,11 +47,11 @@
 | ID | Requirement | Category | Ver. | Scope | Source |
 |---|---|---|---|---|---|
 | SIM-REQ-TIME-001 | All simulation components shall obtain time exclusively from the SimulationClock abstraction; direct wall-clock access in simulation logic is prohibited. | Design constraint | R+A | M0 | [ADR-0004][ADR-0006 C1] |
-| SIM-REQ-TIME-003 | The Java scheduler shall be the sole simulation time master; execution back-ends shall be controlled via EmulatorControl. | Architectural constraint | R | M0 | [ADR-0006] |
+| SIM-REQ-TIME-003 | The Java scheduler shall be the sole simulation time master; OBSW targets shall be controlled via EmulatorControl. | Architectural constraint | R | M0 | [ADR-0006] |
 | SIM-REQ-TIME-005 | Given identical initial state and identical TC input sequence with identical simulated injection times, the simulator shall produce byte-identical TM streams including timestamps. | Reproducibility | T | M1 | [ADR-0006 C6] |
-| SIM-REQ-TIME-006 | The synchronization quantum shall be configurable per back-end link at runtime. | Configurability | T | M5 | [ADR-0006 C3] |
-| SIM-REQ-LINK-001 | The loopback back-end shall implement the same EmulatorControl and SpaceLink contracts as external back-ends. | Design constraint | T | M0 | [ADR-0006 C5] |
-| SIM-REQ-LINK-003 | The validation test suite shall pass unchanged against any conforming back-end (loopback, native process, emulator). | Portability | T | M3 | [ADR-0001] |
+| SIM-REQ-TIME-006 | The synchronization quantum shall be configurable per OBSW-target link at runtime. | Configurability | T | M5 | [ADR-0006 C3] |
+| SIM-REQ-LINK-001 | The loopback OBSW target shall implement the same EmulatorControl and SpaceLink contracts as external OBSW targets. | Design constraint | T | M0 | [ADR-0006 C5] |
+| SIM-REQ-LINK-003 | The validation test suite shall pass unchanged against any conforming OBSW target (loopback, native process, emulator). | Portability | T | M3 | [ADR-0001] |
 | SIM-REQ-QA-001 | Every validation test shall carry @TestCase and @Requirement annotations resolvable against SVS and SRS. | Verifiability | A | M0 | SDP §5 |
 | SIM-REQ-QA-002 | CI shall fail a milestone gate if any SRS requirement in scope lacks a passing validation test (or recorded manual verdict). | Verifiability | A | M0 | SDP §5 |
 
