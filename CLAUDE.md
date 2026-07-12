@@ -69,11 +69,13 @@ time master**, back-ends are stepped slaves via `EmulatorControl` with
 
 ## Build & test
 
-- `mvn -q verify` — full build with tests.
-- `mvn -q -pl pus-core -am test` — build & test one module (and its deps).
-- `mvn -q -pl pus-core test -Dtest=PrimaryHeaderCodecTest` — single test class;
-  append `#methodName` for a single method.
-- Java 21, Maven ≥ 3.9. No network resources required at test time.
+- `./mvnw -q verify` — full build with tests.
+- `./mvnw -q -pl pus-core -am test` — build & test one module (and its deps).
+- `./mvnw -q -pl pus-core test -Dtest=PrimaryHeaderCodecTest` — single test
+  class; append `#methodName` for a single method.
+- Java 21; Maven is pinned to 3.9.11 via the committed wrapper — always use
+  `./mvnw`, never a locally installed `mvn`. No network resources required at
+  test time.
 - Static analysis (Checkstyle/SpotBugs) to be wired in M0; the wall-clock ban
   (rule 2) gets an automated check there.
 
