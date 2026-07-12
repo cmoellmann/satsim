@@ -17,6 +17,10 @@
 | JUnit 5 (junit-bom, junit-jupiter) | 5.10.2 | test | EPL-2.0 | None (test scope, not distributed) | 2026-07-12, C. Möllmann (bootstrap) |
 | Apache Maven | ≥ 3.9 | build | Apache-2.0 | None (build tool) | 2026-07-12, C. Möllmann (bootstrap) |
 | maven-surefire-plugin | 3.2.5 | build | Apache-2.0 | None (build plugin) | 2026-07-12, C. Möllmann (bootstrap) |
+| maven-compiler-plugin | 3.13.0 | build | Apache-2.0 | None (build plugin) | 2026-07-12, C. Möllmann (merge of PR #3) |
+| actions/checkout | v4 | build (CI) | MIT | None (CI infrastructure) | 2026-07-12, C. Möllmann (merge of PR #3) |
+| actions/setup-java | v4 | build (CI) | MIT | None (CI infrastructure) | 2026-07-12, C. Möllmann (merge of PR #3) |
+| Eclipse Temurin JDK (CI runner) | 21 | build (CI) | GPL-2.0-only WITH Classpath-exception-2.0 | None (CI toolchain, not redistributed) | 2026-07-12, C. Möllmann (merge of PR #3) |
 | JDK (Java SE) | 21 | runtime platform | per distribution (e.g. OpenJDK: GPL-2.0-only WITH Classpath-exception-2.0) | None with Classpath Exception; JDK itself is not redistributed | 2026-07-12, C. Möllmann (bootstrap) |
 
 Default Maven core plugins (compiler, resources, jar, install, deploy) are
@@ -42,3 +46,4 @@ the Maven distribution unless pinned in `pom.xml`.
 | Issue | Date | Change |
 |---|---|---|
 | 1 (draft) | 2026-07-12 | Initial register of bootstrap dependencies; planned M0/M1 entries. |
+| 1 (draft) | 2026-07-12 | CI toolchain added (GitHub Actions checkout/setup-java, Temurin 21); maven-compiler-plugin 3.13.0 pinned (build fix). |
