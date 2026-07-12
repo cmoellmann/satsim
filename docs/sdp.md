@@ -116,6 +116,10 @@ AI (Claude / Claude Code) is used as a development tool. Controls:
 4. `CLAUDE.md` is a controlled document (changes via PR).
 5. AI may propose new SRS/SVS entries; they become applicable only after human
    approval and merge.
+6. AI shall obtain human approval before adding, removing, or upgrading any
+   third-party dependency (including build plugins), presenting license and
+   distribution impact beforehand. All dependencies are recorded in the
+   Software Reuse File (`docs/reuse-file.md`).
 
 ## 7. Documentation Plan
 
@@ -128,6 +132,7 @@ AI (Claude / Claude Code) is used as a development tool. Controls:
 | ADR log + ADRs | docs/adr/ | ADR-0001…0006 accepted |
 | SDD | docs/sdd.md | to be created during M0/M1 |
 | SUM (user manual) | docs/sum.md | deferred to M2 |
+| SRF (software reuse file: dependencies, licenses) | docs/reuse-file.md | created |
 | Test reports | docs/test-reports/ | generated per baseline |
 
 Consciously dropped (Cat D tailoring): separate SVerP/SValP, ISVV artifacts,
