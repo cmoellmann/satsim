@@ -1,4 +1,4 @@
-package org.satsim.sim.target;
+package org.satsim.sim.obsw;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;

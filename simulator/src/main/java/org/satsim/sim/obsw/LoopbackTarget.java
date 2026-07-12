@@ -1,4 +1,4 @@
-package org.satsim.sim.target;
+package org.satsim.sim.obsw;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
