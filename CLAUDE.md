@@ -19,7 +19,9 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
 - `docs/srs.md` — numbered requirements (strict table format, parsed by CI).
 - `docs/svs.md` — validation test case definitions (spec-first).
 - `docs/sdp.md` — process, milestones M0–M5 with exit criteria, action register.
-- `docs/adr/` — architecture decisions ADR-0001…0006. **Immutable once accepted.**
+- `docs/adr/` — decision log (`DECISION-LOG.md`, ADR-0001…0006 summaries) plus
+  full ADR files where warranted (currently only ADR-0006). **Immutable once
+  accepted.**
 
 ## Architecture decisions in one breath
 
@@ -57,10 +59,15 @@ time master**, back-ends are stepped slaves via `EmulatorControl` with
   milestone tag proposed.
 - Commit style: conventional commits; reference requirement/test IDs where
   applicable (e.g. `feat(pus-core): primary header codec [SIM-REQ-PUS-001]`).
+- Coverage: indicative 80% line coverage on `pus-core` only; no formal target
+  elsewhere (SDP §2.1 tailoring).
 
 ## Build & test
 
 - `mvn -q verify` — full build with tests.
+- `mvn -q -pl pus-core -am test` — build & test one module (and its deps).
+- `mvn -q -pl pus-core test -Dtest=PrimaryHeaderCodecTest` — single test class;
+  append `#methodName` for a single method.
 - Java 21, Maven ≥ 3.9. No network resources required at test time.
 - Static analysis (Checkstyle/SpotBugs) to be wired in M0; the wall-clock ban
   (rule 2) gets an automated check there.
@@ -69,4 +76,6 @@ time master**, back-ends are stepped slaves via `EmulatorControl` with
 
 Bootstrap package: documents complete (drafts), Maven skeleton with interface
 stubs (`SimulationClock`, `EmulatorControl`, `SpaceLink`) and traceability
-annotations. No production logic yet — M0 starts here.
+annotations. Spring Boot dependencies and the CI workflow do not exist yet —
+both are M0 scope; the module map above describes the target architecture.
+No production logic yet — M0 starts here.
