@@ -26,7 +26,7 @@ Start here:
 - `docs/srs.md`, `docs/svs.md` — requirements and validation test definitions
 - `docs/adr/` — architecture decision records
 
-Build: `mvn -q verify` (Java 21, Maven ≥ 3.9).
+Build: `./mvnw -q verify` (Java 21; Maven 3.9.11 via committed wrapper).
 
 Status: bootstrap package — documents drafted, skeleton compiles, no production
 logic yet. Next: milestone M0 (see SDP §4).
