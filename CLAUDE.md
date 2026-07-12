@@ -8,8 +8,8 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
 ## Module map
 
 - `pus-core` — CCSDS/PUS-C packet library. Framework-free, no Spring, no I/O.
-- `simulator` — Spring Boot backend: scheduler (time master), execution
-  back-ends, REST/WebSocket API; serves the static frontend from
+- `simulator` — Spring Boot backend: scheduler (time master), OBSW targets
+  (execution back-ends), REST/WebSocket API; serves the static frontend from
   `src/main/resources/static`.
 - `sim-test-support` — `@Requirement` / `@TestCase` annotations for traceability.
 
@@ -25,12 +25,12 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
 
 ## Architecture decisions in one breath
 
-Process-isolated OBSW back-ends behind `SpaceLink` (ADR-0001); strict PUS-C
+Process-isolated OBSW targets ('back-ends' in ADR wording) behind `SpaceLink` (ADR-0001); strict PUS-C
 header layouts, services tailored to ST[17] then ST[1] (ADR-0002); single APID
 100 (ADR-0003); CUC 4+2 time, epoch 2026-01-01T00:00:00 UTC, sourced only from
 `SimulationClock` (ADR-0004); own thin frontend now, Yamcs-ready TCP
 space-packet link later (ADR-0005); **the Java scheduler is the sole simulation
-time master**, back-ends are stepped slaves via `EmulatorControl` with
+time master**, OBSW targets are stepped slaves via `EmulatorControl` with
 `grant(budget) → consumed(time, stopReason)` semantics (ADR-0006).
 
 ## Hard rules

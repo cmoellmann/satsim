@@ -24,7 +24,7 @@
 | SIM-TC-013 | SIM-REQ-UI-001, SIM-REQ-UI-002, SIM-REQ-UI-004 | Frontend smoke test | M | Checklist: page loads; compose TC(17,1); raw hex shown and equals expected vector; send; TM(17,2) appears in live log with decoded fields. Verdict + date + name recorded in milestone report. |
 | SIM-TC-014 | SIM-REQ-QA-001, SIM-REQ-QA-002 | Traceability toolchain self-check | A | CI script detects: SVS case without implementing test, test with unknown IDs, in-scope requirement without SVS coverage. Verified with deliberate fixtures. |
 | SIM-TC-015 | SIM-REQ-LINK-002 | TCP length-framed link conformance | A | External test client sends V-TC-01 over TCP framing per ICD §8, receives correctly framed TM(17,2). (Scope: M2) |
-| SIM-TC-016 | SIM-REQ-LINK-003 | Back-end interchangeability | A | SIM-TC-003…012 suite passes unchanged against native-process back-end. (Scope: M3) |
+| SIM-TC-016 | SIM-REQ-LINK-003 | OBSW target interchangeability | A | SIM-TC-003…012 suite passes unchanged against native-process OBSW target. (Scope: M3) |
 
 ## Change log
 

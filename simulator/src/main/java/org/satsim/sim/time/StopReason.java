@@ -6,6 +6,6 @@ public enum StopReason {
   BUDGET_EXHAUSTED,
   /** Returned early: an event for the master is pending (e.g. TM emitted, I/O). */
   EVENT_PENDING,
-  /** Returned early: back-end halted (OBSW exit/crash/breakpoint). */
+  /** Returned early: OBSW target halted (OBSW exit/crash/breakpoint). */
   HALTED
 }
