@@ -49,6 +49,11 @@ time master**, back-ends are stepped slaves via `EmulatorControl` with
 5. `pus-core` stays dependency-free (JDK only). No Spring types outside `simulator`.
 6. Strict PUS-C: no PUS-A fallbacks, no optional-field creativity beyond the ICD.
 7. This file is a controlled document — propose changes via PR, don't rewrite ad hoc.
+8. **Dependency control:** never add, remove, or upgrade a third-party
+   dependency (incl. build plugins) without prior human approval, presenting
+   the license situation first. Every dependency is recorded with version,
+   scope, and license in `docs/reuse-file.md` (Software Reuse File) in the
+   same PR that introduces it.
 
 ## Working agreement
 

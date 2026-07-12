@@ -1,0 +1,44 @@
+# SatSim Software Reuse File (SRF)
+
+- Configuration item: SATSIM-SRF, Issue 1 (draft)
+- Purpose: register of all reused third-party software (runtime, test, and
+  build dependencies) with license and distribution impact, per tailored
+  ECSS-Q-ST-80C. Maintained under SDP §6 control 6: no dependency is added,
+  removed, or upgraded without prior human approval; every change to the
+  dependency set updates this file in the same PR.
+- Scope legend: **runtime** = linked into distributed artifacts;
+  **test** = test classpath only, not distributed; **build** = build/CI
+  tooling only, not distributed.
+
+## 1. Approved dependencies
+
+| Component | Version | Scope | License (SPDX) | Distribution impact | Approved |
+|---|---|---|---|---|---|
+| JUnit 5 (junit-bom, junit-jupiter) | 5.10.2 | test | EPL-2.0 | None (test scope, not distributed) | 2026-07-12, C. Möllmann (bootstrap) |
+| Apache Maven | ≥ 3.9 | build | Apache-2.0 | None (build tool) | 2026-07-12, C. Möllmann (bootstrap) |
+| maven-surefire-plugin | 3.2.5 | build | Apache-2.0 | None (build plugin) | 2026-07-12, C. Möllmann (bootstrap) |
+| JDK (Java SE) | 21 | runtime platform | per distribution (e.g. OpenJDK: GPL-2.0-only WITH Classpath-exception-2.0) | None with Classpath Exception; JDK itself is not redistributed | 2026-07-12, C. Möllmann (bootstrap) |
+
+Default Maven core plugins (compiler, resources, jar, install, deploy) are
+Apache-2.0 and covered by the Apache Maven entry; versions are inherited from
+the Maven distribution unless pinned in `pom.xml`.
+
+## 2. Planned dependencies (approval pending — do not add before approval)
+
+| Component | Anticipated scope | License (SPDX) | Notes | Milestone |
+|---|---|---|---|---|
+| Spring Boot (web, websocket) | runtime (`simulator` only) | Apache-2.0 | Permissive; no copyleft obligations beyond notice retention | M0/M1 |
+| Checkstyle (via maven plugin) | build | LGPL-2.1-or-later (tool), plugin Apache-2.0 | Build-time only; LGPL tool is not linked into or distributed with SatSim | M0 |
+| SpotBugs (via maven plugin) | build | LGPL-2.1-only | Build-time only; not distributed | M0 |
+
+## 3. Open licensing items
+
+| ID | Item | Status |
+|---|---|---|
+| SRF-OPEN-1 | SatSim itself has no `LICENSE` file yet. An outbound license must be chosen before public distribution (planned per README). All current and planned dependencies above are compatible with any common outbound choice (Apache-2.0, MIT, EPL, proprietary) since copyleft components are test/build scope only. | open |
+
+## 4. Change log
+
+| Issue | Date | Change |
+|---|---|---|
+| 1 (draft) | 2026-07-12 | Initial register of bootstrap dependencies; planned M0/M1 entries. |
