@@ -41,6 +41,16 @@ SatSim is two experiments in one.
   suppression. SpotBugs ships with an intentionally empty exclude list — and
   its very first run caught real defects in our own tooling, which were fixed,
   not excluded.
+- **The on-board software is a plug, not a partner.** OBSW targets are
+  process-isolated behind two narrow contracts — packet transport
+  (`SpaceLink`) and simulated-time mastering (`EmulatorControl`,
+  [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md)): today an
+  in-process loopback, next a native C/Rust demo process, then real flight
+  binaries under instruction-level emulators (QEMU, TSIM, Terma TEMU/cOBC).
+  Interchangeability is itself a requirement (SIM-REQ-LINK-003): the entire
+  validation suite must pass **unchanged** against any conforming target,
+  turning the byte-exact, deterministic test suite into a conformance kit
+  for progressively more real spacecraft.
 - **Dependency governance, ECSS-style.** No third-party component (including
   build plugins) enters without the license being presented and approved
   first; everything is recorded with version, scope, and SPDX license in the
