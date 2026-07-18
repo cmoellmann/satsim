@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.satsim.pus.PacketDecodeException;
 import org.satsim.pus.tm.TmPacket;
 import org.satsim.sim.obsw.LoopbackTarget;
-import org.satsim.sim.obsw.PusSpacecraftApplication;
-import org.satsim.sim.obsw.PusSpacecraftApplication.RejectReason;
+import org.satsim.sim.obsw.PusSimulatedObsw;
+import org.satsim.sim.obsw.PusSimulatedObsw.RejectReason;
 import org.satsim.sim.time.SimulationScheduler;
 import org.satsim.testsupport.Requirement;
 import org.satsim.testsupport.TestCase;
@@ -37,17 +37,17 @@ class PusChainTest {
   private static final byte[] V_NEG_01 = HEX.parseHex("18 64 C0 00 00 06 20 11 01 00 00 FA 84");
   private static final byte[] V_NEG_02 = HEX.parseHex("18 64 C0 00 00 06 10 11 01 00 00 F6 6D");
 
-  /** A freshly started chain: application + zero-delay loopback + scheduler. */
+  /** A freshly started chain: obsw + zero-delay loopback + scheduler. */
   private record Chain(
-      PusSpacecraftApplication application, SimulationScheduler scheduler, List<byte[]> tms) {
+      PusSimulatedObsw obsw, SimulationScheduler scheduler, List<byte[]> tms) {
 
     static Chain start() {
-      PusSpacecraftApplication application = new PusSpacecraftApplication();
-      SimulationScheduler scheduler = new SimulationScheduler(new LoopbackTarget(0, application));
+      PusSimulatedObsw obsw = new PusSimulatedObsw();
+      SimulationScheduler scheduler = new SimulationScheduler(new LoopbackTarget(0, obsw));
       List<byte[]> tms = new ArrayList<>();
       scheduler.onTm(tms::add);
       scheduler.start();
-      return new Chain(application, scheduler, tms);
+      return new Chain(obsw, scheduler, tms);
     }
 
     void inject(byte[] tc) {
@@ -77,7 +77,7 @@ class PusChainTest {
 
   /**
    * SIM-TC-006: V-NEG-01 (CRC failure) is rejected: no TM is emitted and the
-   * rejection is observable on the application's rejection queue.
+   * rejection is observable on the obsw's rejection queue.
    */
   @Test
   @TestCase("SIM-TC-006")
@@ -88,8 +88,8 @@ class PusChainTest {
     chain.scheduler().advanceBy(1_000_000_000L);
 
     assertEquals(0, chain.tms().size());
-    assertEquals(1, chain.application().rejections().size());
-    assertEquals(RejectReason.NOT_A_PACKET, chain.application().rejections().get(0).reason());
+    assertEquals(1, chain.obsw().rejections().size());
+    assertEquals(RejectReason.NOT_A_PACKET, chain.obsw().rejections().get(0).reason());
   }
 
   /**
@@ -106,9 +106,9 @@ class PusChainTest {
     chain.scheduler().advanceBy(1_000_000_000L);
 
     assertEquals(0, chain.tms().size());
-    assertEquals(1, chain.application().rejections().size());
+    assertEquals(1, chain.obsw().rejections().size());
     assertEquals(
-        RejectReason.ILLEGAL_PUS_VERSION, chain.application().rejections().get(0).reason());
+        RejectReason.ILLEGAL_PUS_VERSION, chain.obsw().rejections().get(0).reason());
   }
 
   /**
@@ -135,8 +135,8 @@ class PusChainTest {
         second.secondaryHeader().messageTypeCounter());
 
     Chain wrap = Chain.start();
-    wrap.application().presetTmSequenceCount(16383);
-    wrap.application().presetMessageTypeCounter(17, 2, 65535);
+    wrap.obsw().presetTmSequenceCount(16383);
+    wrap.obsw().presetMessageTypeCounter(17, 2, 65535);
     wrap.inject(V_TC_01);
     wrap.scheduler().advanceBy(1_000_000L);
     wrap.inject(V_TC_02);
@@ -174,9 +174,9 @@ class PusChainTest {
     chain.scheduler().advanceBy(1_000_000L);
 
     assertEquals(0, chain.tms().size());
-    assertEquals(1, chain.application().rejections().size());
+    assertEquals(1, chain.obsw().rejections().size());
     assertEquals(
-        RejectReason.ILLEGAL_SERVICE_OR_SUBTYPE, chain.application().rejections().get(0).reason());
+        RejectReason.ILLEGAL_SERVICE_OR_SUBTYPE, chain.obsw().rejections().get(0).reason());
   }
 
   @Test

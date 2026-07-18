@@ -17,8 +17,8 @@ class LoopbackTargetTest {
 
   private static final long PROCESSING = 1_000_000L; // 1 ms simulated
 
-  /** M0-style echo application: keeps these transport-contract tests packet-agnostic. */
-  private static final SpacecraftApplication ECHO = (tc, now) -> List.of(tc);
+  /** M0-style echo obsw: keeps these transport-contract tests packet-agnostic. */
+  private static final SimulatedObsw ECHO = (tc, now) -> List.of(tc);
 
   private static LoopbackTarget runningTarget() {
     LoopbackTarget target = new LoopbackTarget(PROCESSING, ECHO);
