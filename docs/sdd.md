@@ -349,12 +349,17 @@ Configuration (`application.properties`): `server.port=8090`,
 
 ### 3.4 Frontend (`static/`)
 
-Framework-free HTML/JS (ADR-0005). `app.js` does three things:
-debounced live hex preview of the composed TC via `POST /api/tc/preview`
-[SIM-REQ-UI-004]; TC submission (structured compose or raw hex injection);
-and a live TM/TC packet log fed by the `/api/tm` WebSocket with automatic
-reconnect (capped at 200 rows). It trusts the backend for all
-encoding/decoding — no packet knowledge is duplicated in JavaScript.
+Framework-free HTML/JS (ADR-0005). `app.js` provides (SCR-003 feature set):
+dropdown TC compose from the tailored service set with custom free-entry and
+debounced live hex preview via `POST /api/tc/preview` [SIM-REQ-UI-004, -010];
+TC submission (structured, one-click ping, raw hex injection) with rows built
+from the enriched ICD §8.1 response [SIM-REQ-UI-006]; a live packet log fed
+by the `/api/tm` WebSocket (frame kinds tm/time/rejection, automatic
+reconnect, capped at 200 rows) with kind/service filters, clear and pause
+buffering [SIM-REQ-UI-002, -007, -008]; a header OBT clock driven by time
+frames [SIM-REQ-UI-005]; and a click-to-expand field-level detail view per
+row plus click-to-copy hex cells [SIM-REQ-UI-009]. It trusts the backend for
+all encoding/decoding — no packet knowledge is duplicated in JavaScript.
 
 ## 4. Runtime view — threads and state ownership
 

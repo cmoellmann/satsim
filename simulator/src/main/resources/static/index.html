@@ -8,8 +8,20 @@
 </head>
 <body>
   <header>
-    <h1>SatSim <span class="sub">PUS-C TM/TC console · APID 100</span></h1>
-    <div id="link-status" class="status offline">TM link: connecting…</div>
+    <div class="head-left">
+      <h1>SatSim <span class="sub">PUS-C TM/TC Console</span></h1>
+      <p class="tagline">Ground console for the simulated spacecraft (APID 100):
+        compose and send PUS-C telecommands, follow telemetry and simulated
+        on-board time live.</p>
+    </div>
+    <div class="head-right">
+      <div class="obt">
+        <span class="obt-label">OBT</span>
+        <span id="obt-utc" class="obt-utc">—</span>
+        <span id="obt-seconds" class="obt-seconds">T+ —</span>
+      </div>
+      <div id="link-status" class="status offline" aria-live="polite">TM link: connecting…</div>
+    </div>
   </header>
 
   <main>
@@ -17,11 +29,13 @@
       <h2>Compose TC</h2>
       <form id="compose-form">
         <div class="row">
-          <label>Service
-            <input type="number" id="service" value="17" min="0" max="255">
+          <label>Type
+            <select id="type-select"></select>
+            <input type="number" id="type-custom" min="0" max="255" value="17" hidden>
           </label>
           <label>Subtype
-            <input type="number" id="subtype" value="1" min="0" max="255">
+            <select id="subtype-select"></select>
+            <input type="number" id="subtype-custom" min="0" max="255" value="1" hidden>
           </label>
           <fieldset id="ack-flags">
             <legend>Ack flags (ICD §3)</legend>
@@ -40,6 +54,7 @@
           <label class="grow">Encoded packet preview
             <output id="preview" class="hex">—</output>
           </label>
+          <button type="button" id="ping" title="Send TC(17,1) with the current ack flags">Ping</button>
           <button type="submit" id="send">Send TC</button>
         </div>
       </form>
@@ -57,7 +72,23 @@
     </section>
 
     <section class="card">
-      <h2>Live packet log</h2>
+      <div class="log-head">
+        <h2>Live packet log</h2>
+        <div class="log-controls">
+          <fieldset class="kind-filter">
+            <legend>Show</legend>
+            <label><input type="checkbox" id="show-tc" checked> TC</label>
+            <label><input type="checkbox" id="show-tm" checked> TM</label>
+            <label><input type="checkbox" id="show-rej" checked> REJ</label>
+          </fieldset>
+          <label class="service-filter">Service
+            <input type="number" id="service-filter" min="0" max="255" placeholder="all">
+          </label>
+          <button type="button" id="pause" aria-pressed="false">Pause</button>
+          <button type="button" id="clear">Clear</button>
+        </div>
+      </div>
+      <p class="hint">Click a row for the field-level breakdown; click a hex cell to copy it.</p>
       <table id="log">
         <thead>
           <tr>
