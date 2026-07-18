@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SatSim — PUS-C TM/TC Console</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>SatSim <span class="sub">PUS-C TM/TC console · APID 100</span></h1>
+    <div id="link-status" class="status offline">TM link: connecting…</div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Compose TC</h2>
+      <form id="compose-form">
+        <div class="row">
+          <label>Service
+            <input type="number" id="service" value="17" min="0" max="255">
+          </label>
+          <label>Subtype
+            <input type="number" id="subtype" value="1" min="0" max="255">
+          </label>
+          <fieldset id="ack-flags">
+            <legend>Ack flags (ICD §3)</legend>
+            <label><input type="checkbox" id="ack-acceptance"> acceptance</label>
+            <label><input type="checkbox" id="ack-start"> start</label>
+            <label><input type="checkbox" id="ack-progress"> progress</label>
+            <label><input type="checkbox" id="ack-completion"> completion</label>
+          </fieldset>
+        </div>
+        <div class="row">
+          <label class="grow">Application data (hex, optional)
+            <input type="text" id="app-data" placeholder="e.g. 00 02 00 01" spellcheck="false">
+          </label>
+        </div>
+        <div class="row preview-row">
+          <label class="grow">Encoded packet preview
+            <output id="preview" class="hex">—</output>
+          </label>
+          <button type="submit" id="send">Send TC</button>
+        </div>
+      </form>
+      <details>
+        <summary>Raw hex injection</summary>
+        <form id="raw-form" class="row">
+          <label class="grow">Complete space packet (hex)
+            <input type="text" id="raw-hex" placeholder="18 64 C0 00 00 06 20 11 01 00 00 FA 83"
+                   spellcheck="false">
+          </label>
+          <button type="submit">Inject</button>
+        </form>
+      </details>
+      <div id="error" class="error" hidden></div>
+    </section>
+
+    <section class="card">
+      <h2>Live packet log</h2>
+      <table id="log">
+        <thead>
+          <tr>
+            <th>Dir</th><th>OBT</th><th>Type</th><th>Seq</th><th>Ctr</th><th>Raw hex</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -17,8 +17,11 @@ class LoopbackTargetTest {
 
   private static final long PROCESSING = 1_000_000L; // 1 ms simulated
 
+  /** M0-style echo application: keeps these transport-contract tests packet-agnostic. */
+  private static final SpacecraftApplication ECHO = (tc, now) -> List.of(tc);
+
   private static LoopbackTarget runningTarget() {
-    LoopbackTarget target = new LoopbackTarget(PROCESSING);
+    LoopbackTarget target = new LoopbackTarget(PROCESSING, ECHO);
     target.initialize();
     return target;
   }
@@ -112,7 +115,7 @@ class LoopbackTargetTest {
 
   @Test
   void lifecycleViolationsAreRejected() {
-    LoopbackTarget fresh = new LoopbackTarget(PROCESSING);
+    LoopbackTarget fresh = new LoopbackTarget(PROCESSING, ECHO);
     assertThrows(IllegalStateException.class, () -> fresh.grant(1));
     assertThrows(IllegalStateException.class, () -> fresh.sendTc(new byte[] {1}));
 
@@ -133,9 +136,23 @@ class LoopbackTargetTest {
 
   @Test
   void invalidArgumentsAreRejected() {
-    assertThrows(IllegalArgumentException.class, () -> new LoopbackTarget(0));
+    assertThrows(IllegalArgumentException.class, () -> new LoopbackTarget(-1, ECHO));
+    assertThrows(NullPointerException.class, () -> new LoopbackTarget(PROCESSING, null));
     LoopbackTarget target = runningTarget();
     assertThrows(IllegalArgumentException.class, () -> target.grant(0));
     assertThrows(IllegalArgumentException.class, () -> target.grant(-1));
+  }
+
+  @Test
+  void zeroProcessingDelayEmitsTmAtTcArrivalTime() {
+    LoopbackTarget target = new LoopbackTarget(0, ECHO);
+    target.initialize();
+    List<byte[]> tms = new ArrayList<>();
+    target.onTm(tms::add);
+    target.sendTc(new byte[] {3});
+    Consumed consumed = target.grant(1_000L);
+    assertEquals(0, consumed.nanosConsumed());
+    assertEquals(StopReason.EVENT_PENDING, consumed.reason());
+    assertEquals(1, tms.size());
   }
 }
