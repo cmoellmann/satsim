@@ -7,3 +7,4 @@
 | SIM-TC-903 | SIM-REQ-FIX-001 | Case with two implementing tests | A | fixture |
 | SIM-TC-904 | SIM-REQ-FIX-004 | Out-of-scope case without test (must not be reported) | A | fixture |
 | SIM-TC-905 | SIM-REQ-FIX-001 | Manual case without test (must not be reported) | M | fixture |
+| SIM-TC-906 | SIM-REQ-FIX-005 | Out-of-scope M1b case without test (must not be reported) | A | fixture |

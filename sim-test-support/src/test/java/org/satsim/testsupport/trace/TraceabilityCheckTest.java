@@ -21,7 +21,7 @@ class TraceabilityCheckTest {
         TraceabilityCheck.parseSrs(base.resolve("srs.md")),
         TraceabilityCheck.parseSvs(base.resolve("svs.md")),
         TraceabilityCheck.scanTests(List.of(base.resolve("tests"))),
-        0);
+        "M0");
   }
 
   private static void assertFinding(List<Finding> findings, String code, String subject) {
@@ -70,6 +70,14 @@ class TraceabilityCheckTest {
     assertNoFinding(findings, "SIM-TC-905"); // manual case
     assertNoFinding(findings, "SIM-REQ-FIX-003"); // review-verified requirement
     assertNoFinding(findings, "SIM-REQ-FIX-004"); // out-of-scope requirement
+    assertNoFinding(findings, "SIM-REQ-FIX-005"); // out-of-scope inserted increment (M1b)
+  }
+
+  @Test
+  void ordersInsertedMilestoneIncrements() {
+    assertTrue(TraceabilityCheck.milestoneOrdinal("M0") < TraceabilityCheck.milestoneOrdinal("M1"));
+    assertTrue(TraceabilityCheck.milestoneOrdinal("M1") < TraceabilityCheck.milestoneOrdinal("M1b"));
+    assertTrue(TraceabilityCheck.milestoneOrdinal("M1b") < TraceabilityCheck.milestoneOrdinal("M2"));
   }
 
   @Test

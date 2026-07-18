@@ -41,6 +41,10 @@
 | SIM-REQ-UI-002 | The web frontend shall display received TM live, showing raw hex and decoded header fields. | Functional | M | M1 | project goal |
 | SIM-REQ-UI-003 | The backend shall provide REST TC submission and WebSocket TM distribution per ICD §8 such that the end-to-end path is automatable without a browser. | Functional | T | M1 | ICD §8 |
 | SIM-REQ-UI-004 | The frontend shall display the raw encoded bytes of each sent TC (hex) before/after sending. | Functional | M | M1 | debugging goal |
+| SIM-REQ-HK-001 | The simulated spacecraft shall create a housekeeping report structure upon a valid TC(3,1) per ICD §9.2; created structures shall start with periodic generation disabled. | Functional | T | M1b | ICD §9 [SCR-001] |
+| SIM-REQ-HK-002 | For each enabled housekeeping structure, the simulated spacecraft shall emit one TM(3,25) per ICD §9.4 at every collection interval of simulated time per ICD §9.3. | Functional | T | M1b | ICD §9 [SCR-001] |
+| SIM-REQ-HK-003 | The default housekeeping structure SID 1 per ICD §9.6 shall exist with periodic generation enabled at simulation start, without ground commanding. | Functional | T | M1b | ICD §9 [SCR-001] |
+| SIM-REQ-HK-004 | The simulated spacecraft shall enable and disable periodic generation of housekeeping structures upon valid TC(3,5) and TC(3,7) per ICD §9.3. | Functional | T | M1b | ICD §9 [SCR-001] |
 
 ## 2. Non-functional requirements
 
@@ -60,3 +64,4 @@
 | Issue | Date | Change |
 |---|---|---|
 | 1 (draft) | 2026-07-12 | Initial set for M0–M3 scope (+M5 sync item). Lowercase "shall"; functional / non-functional split with Category column and defined category vocabulary. |
+| 1 (draft) | 2026-07-18 | SIM-REQ-HK-001…004 added (ST[3] housekeeping subset, scope M1b) per SCR-001. |
