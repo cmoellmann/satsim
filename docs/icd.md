@@ -1,8 +1,9 @@
 # SatSim Space–Ground Interface Control Document (ICD)
 
-- Configuration item: SATSIM-ICD, Issue 1 (draft)
+- Configuration item: SATSIM-ICD, Issue 2 (draft)
 - Applicable: ECSS-E-ST-70-41C (PUS-C), CCSDS 133.0-B (Space Packet Protocol), CCSDS 301.0-B (Time Codes)
-- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2)
+- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset)
+- Issue 2 (draft) changes vs Issue 1: added §9 (ST[3] housekeeping subset), reference vectors §6.4/§6.5, OP-3; open points renumbered §9→§10. Per SCR-001.
 
 > **RULE (binding, see CLAUDE.md):** The reference vectors in §6 are the authoritative
 > byte-level contract. Implementation and tests conform to this document; this
@@ -102,6 +103,43 @@ V-TM-02: as V-TM-01 but seq count=1, msg type counter=1, T=1.5 s:
 - V-NEG-01: V-TC-01 with last octet changed to `84` → shall be rejected (CRC failure).
 - V-NEG-02: V-TC-01 with octet 7 changed to `10` (PUS version 1) → shall be rejected (unsupported PUS version).
 
+### 6.4 ST[3] TC vectors (layouts per §9)
+
+V-TC-03: TC(3,1) create structure — SID=2, collection interval=5000 ms, N1=2,
+parameters {HK-P001, HK-P003}; seq count=0, ack=0b0000 (25 octets):
+
+```
+18 64 C0 00 00 12 20 03 01 00 00 00 02 00 00 13 88 00 02 00 01 00 03 8D CE
+```
+
+V-TC-04: TC(3,5) enable periodic generation — N=1, SID=2; seq count=1 (17 octets):
+
+```
+18 64 C0 01 00 0A 20 03 05 00 00 00 01 00 02 15 41
+```
+
+V-TC-05: TC(3,7) disable periodic generation — N=1, SID=2; seq count=2 (17 octets):
+
+```
+18 64 C0 02 00 0A 20 03 07 00 00 00 01 00 02 70 3D
+```
+
+### 6.5 TM(3,25) vectors (default structure SID 1, §9.6)
+
+V-TM-03: first report after a fresh start with no TC traffic — T=1.0 s,
+seq count=0, msg type counter=0, HK-P001=0, HK-P002=0, HK-P003=3520 (33 octets):
+
+```
+08 64 C0 00 00 1A 20 03 19 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 00 00 00 00 00 0D C0 25 61
+```
+
+V-TM-04: second report, same scenario — T=2.0 s, seq count=1, msg type
+counter=1, HK-P001=0, HK-P002=1 (the report V-TM-03), HK-P003=3540 (33 octets):
+
+```
+08 64 C0 01 00 1A 20 03 19 00 01 00 00 00 00 00 02 00 00 00 01 00 00 00 00 00 00 00 01 0D D4 52 A3
+```
+
 ## 7. Packet Error Control: CRC-16
 
 - CRC-CCITT: polynomial 0x1021, initial value 0xFFFF, no reflection, no final XOR.
@@ -114,7 +152,78 @@ V-TM-02: as V-TM-01 but seq count=1, msg type counter=1, T=1.5 s:
 - PoC internal: REST `POST /api/tc` (hex or structured JSON) and WebSocket `/api/tm` (JSON with raw hex + decoded fields).
 - External MCS/emulator link (from M2): TCP, one space packet per length-delimited frame — 4-octet big-endian length prefix followed by the packet octets. Host/port configurable.
 
-## 9. Open points
+## 9. ST[3] Housekeeping (tailored subset, SCR-001)
+
+### 9.1 Tailored subservices
+
+| Message | Direction | Purpose |
+|---|---|---|
+| TC(3,1) | ground → space | Create a housekeeping parameter report structure |
+| TC(3,5) | ground → space | Enable periodic generation of report structures |
+| TC(3,7) | ground → space | Disable periodic generation of report structures |
+| TM(3,25) | space → ground | Housekeeping parameter report |
+
+All other ST[3] subservices are not implemented. A TC that is structurally
+valid (CRC, PUS version) but semantically invalid per this section — unknown
+SID, unknown parameter ID, SID 0, duplicate SID on create, collection
+interval below the minimum — is discarded without TM response; the rejection
+is observable in the simulator log. Formal error reporting is deferred to
+ST[1] (OP-3).
+
+### 9.2 TC(3,1) — create housekeeping report structure (application data)
+
+| Field | Size | Value/Convention |
+|---|---|---|
+| Structure ID (SID) | 16 | 1–65535; 0 invalid. SID 1 is reserved for the default structure (§9.6) and cannot be created. |
+| Collection interval | 32 | Milliseconds of **simulated** time; minimum 100. |
+| N1 (parameter count) | 16 | 1–16 |
+| N1 × Parameter ID | 16 each | IDs per §9.5; report order = order in this list. |
+
+A created structure starts with periodic generation **disabled**.
+
+### 9.3 TC(3,5) / TC(3,7) — enable/disable periodic generation (application data)
+
+| Field | Size | Value/Convention |
+|---|---|---|
+| N (SID count) | 16 | 1–16 |
+| N × Structure ID | 16 each | Existing SIDs (incl. SID 1). |
+
+Enabling an already-enabled structure or disabling an already-disabled one is
+a no-op (not an error). When a structure is enabled at simulated time t0, it
+emits reports at t0 + k·interval (k = 1, 2, …) until disabled.
+
+### 9.4 TM(3,25) — housekeeping parameter report (application data)
+
+| Field | Size | Value/Convention |
+|---|---|---|
+| Structure ID (SID) | 16 | Reporting structure |
+| Parameter values | per §9.5 | In the structure's parameter order; no count field (fixed by structure definition). |
+
+### 9.5 Parameter definitions
+
+| ID | Name | Type | Definition |
+|---|---|---|---|
+| 0x0001 | HK-P001 TC accepted count | uint32 | Number of TC space packets accepted (CRC and PUS version valid) since simulation start. |
+| 0x0002 | HK-P002 TM emitted count | uint32 | Number of TM space packets emitted since simulation start, sampled immediately **before** emission of the containing report. |
+| 0x0003 | HK-P003 battery voltage (synthetic) | uint16 | Millivolts, integer-only function of simulated time t_ms (milliseconds since epoch): p = t_ms mod 60000; value = 3500 + ⌊p/50⌋ for p < 30000, else 4100 − ⌊(p−30000)/50⌋. Triangle wave 3500–4100 mV, period 60 s. |
+
+### 9.6 Default structure SID 1
+
+Predefined by this ICD (not created by TC, not deletable):
+
+- SID: 1
+- Parameters, in report order: HK-P001, HK-P002, HK-P003
+- Collection interval: 1000 ms simulated time
+- Periodic generation: **enabled at simulation start** (t0 = 0, first report
+  at T = 1.0 s) — a fresh simulator emits TM(3,25) once per simulated second
+  with no ground commanding.
+
+Generation is driven exclusively by simulated time and performed by the OBSW
+target within granted execution windows (ADR-0006); wall-clock timers are
+prohibited (SIM-REQ-TIME-001).
+
+## 10. Open points
 
 - OP-1: ST[1] verification report formats to be added at M2 (new ICD issue).
 - OP-2: Field values for source/destination ID revisit when multi-node (constellation) scenarios are introduced.
+- OP-3: ST[3] semantic error handling (§9.1) currently log-only; formalize as ST[1] failure reports at M2 (SCR-001).

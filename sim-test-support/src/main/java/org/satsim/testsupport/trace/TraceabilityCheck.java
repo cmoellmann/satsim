@@ -42,8 +42,8 @@ import java.util.stream.Stream;
  */
 public final class TraceabilityCheck {
 
-  /** SRS requirement: ID, verification methods (e.g. "T", "R+A"), milestone number. */
-  public record Req(String id, String verification, int milestone) {}
+  /** SRS requirement: ID, verification methods (e.g. "T", "R+A"), milestone label (e.g. "M1b"). */
+  public record Req(String id, String verification, String milestone) {}
 
   /** SVS test case: ID, referenced requirement IDs, automated (A) vs manual (M). */
   public record SvsCase(String id, List<String> reqIds, boolean automated) {
@@ -80,7 +80,24 @@ public final class TraceabilityCheck {
   private static final Pattern METHOD_DECL =
       Pattern.compile("^\\s*(?:public\\s+|private\\s+|protected\\s+)?\\w[\\w<>\\[\\]]*\\s+\\w+\\s*\\(");
 
+  private static final Pattern MILESTONE_LABEL = Pattern.compile("M(\\d+)([a-i])?");
+
   private TraceabilityCheck() {
+  }
+
+  /**
+   * Ordinal for milestone labels including inserted increments (SCR-001):
+   * {@code M<n>} → n·10, {@code M<n><letter>} → n·10 + letter offset, so
+   * M0 &lt; M1 &lt; M1b &lt; M2. Letter suffixes a–i keep ordinals below the
+   * next numbered milestone.
+   */
+  public static int milestoneOrdinal(String label) {
+    Matcher m = MILESTONE_LABEL.matcher(label);
+    if (!m.matches()) {
+      throw new IllegalArgumentException("invalid milestone label: " + label);
+    }
+    int suffix = m.group(2) == null ? 0 : m.group(2).charAt(0) - 'a' + 1;
+    return Integer.parseInt(m.group(1)) * 10 + suffix;
   }
 
   /** Parses SRS requirement rows: {@code | ID | text | category | verification | milestone | refs |}. */
@@ -93,7 +110,8 @@ public final class TraceabilityCheck {
       String[] cols = line.split("\\|");
       String id = cols[1].trim();
       String verification = cols[4].trim();
-      int milestone = Integer.parseInt(cols[5].trim().substring(1));
+      String milestone = cols[5].trim();
+      milestoneOrdinal(milestone); // fail fast on malformed labels
       reqs.put(id, new Req(id, verification, milestone));
     }
     return reqs;
@@ -179,9 +197,10 @@ public final class TraceabilityCheck {
     }
   }
 
-  /** Runs all consistency checks for the given milestone scope. */
+  /** Runs all consistency checks for the given milestone scope (label, e.g. "M1b"). */
   public static List<Finding> check(Map<String, Req> reqs, Map<String, SvsCase> cases,
-      List<TestMethod> tests, int milestone) {
+      List<TestMethod> tests, String milestone) {
+    int scopeOrdinal = milestoneOrdinal(milestone);
     List<Finding> findings = new ArrayList<>();
 
     Map<String, List<TestMethod>> testsByCase = new HashMap<>();
@@ -201,14 +220,16 @@ public final class TraceabilityCheck {
 
     Set<String> coveredReqs = new HashSet<>();
     for (SvsCase c : cases.values()) {
-      int caseMilestone = 0;
+      int caseOrdinal = 0;
+      String caseMilestone = "M0";
       for (String reqId : c.reqIds()) {
         Req req = reqs.get(reqId);
         if (req == null) {
           findings.add(new Finding("SVS-UNKNOWN-REQ",
               c.id() + " references " + reqId + " which is not defined in SRS", true));
-        } else {
-          caseMilestone = Math.max(caseMilestone, req.milestone());
+        } else if (milestoneOrdinal(req.milestone()) > caseOrdinal) {
+          caseOrdinal = milestoneOrdinal(req.milestone());
+          caseMilestone = req.milestone();
         }
         coveredReqs.add(reqId);
       }
@@ -217,17 +238,17 @@ public final class TraceabilityCheck {
         findings.add(new Finding("DUP-TEST",
             c.id() + " has " + impls.size() + " implementing tests (exactly one allowed)", true));
       }
-      if (c.automated() && caseMilestone <= milestone && impls.isEmpty()) {
+      if (c.automated() && caseOrdinal <= scopeOrdinal && impls.isEmpty()) {
         findings.add(new Finding("SVS-NO-TEST",
-            c.id() + " (scope M" + caseMilestone + ") has no implementing test", false));
+            c.id() + " (scope " + caseMilestone + ") has no implementing test", false));
       }
     }
 
     for (Req req : reqs.values()) {
-      if (req.milestone() <= milestone && req.verification().contains("T")
+      if (milestoneOrdinal(req.milestone()) <= scopeOrdinal && req.verification().contains("T")
           && !coveredReqs.contains(req.id())) {
         findings.add(new Finding("REQ-NO-SVS",
-            req.id() + " (M" + req.milestone() + ", verification " + req.verification()
+            req.id() + " (" + req.milestone() + ", verification " + req.verification()
                 + ") is not referenced by any SVS case", false));
       }
     }
@@ -243,16 +264,17 @@ public final class TraceabilityCheck {
    */
   public static void main(String[] args) throws IOException {
     Path root = Path.of(".");
-    int milestone = 0;
+    String milestone = "M0";
     boolean gate = false;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "--root" -> root = Path.of(args[++i]);
-        case "--milestone" -> milestone = Integer.parseInt(args[++i].substring(1));
+        case "--milestone" -> milestone = args[++i];
         case "--gate" -> gate = true;
         default -> throw new IllegalArgumentException("unknown argument: " + args[i]);
       }
     }
+    milestoneOrdinal(milestone); // fail fast on malformed labels
 
     List<Path> testDirs;
     try (Stream<Path> walk = Files.walk(root, 4)) {
@@ -266,7 +288,7 @@ public final class TraceabilityCheck {
 
     findings.forEach(f -> System.out.println(f.toString()));
     boolean fail = findings.stream().anyMatch(Finding::error) || (gate && !findings.isEmpty());
-    System.out.println("Traceability check M" + milestone + (gate ? " (gate)" : "")
+    System.out.println("Traceability check " + milestone + (gate ? " (gate)" : "")
         + ": " + findings.size() + " finding(s) -> " + (fail ? "FAIL" : "OK"));
     if (fail) {
       System.exit(1);

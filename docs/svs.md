@@ -26,6 +26,10 @@
 | SIM-TC-015 | SIM-REQ-LINK-002 | TCP length-framed link conformance | A | External test client sends V-TC-01 over TCP framing per ICD §8, receives correctly framed TM(17,2). (Scope: M2) |
 | SIM-TC-016 | SIM-REQ-LINK-003 | OBSW target interchangeability | A | SIM-TC-003…012 suite passes unchanged against native-process OBSW target. (Scope: M3) |
 | SIM-TC-017 | SIM-REQ-TIME-006 | Quantum reconfiguration conformance | A | Changing the per-link synchronization quantum at runtime takes effect from the next grant; grant/consume contract (SIM-TC-010 invariants) holds before and after the change; determinism replay (SIM-TC-011 method) unaffected. (Scope: M5) |
+| SIM-TC-018 | SIM-REQ-PUS-007, SIM-REQ-HK-002 | ST[3] reference vector encode/decode | A | V-TC-03/04/05 and V-TM-03/04 encode byte-identically and decode without error to the ICD-specified field values. (Scope: M1b — completes SIM-REQ-PUS-007 coverage for the ICD §6.4/§6.5 vectors added by SCR-001.) |
+| SIM-TC-019 | SIM-REQ-HK-003, SIM-REQ-HK-002 | Default-SID periodic reporting | A | Fresh start, no TC traffic: TM(3,25) for SID 1 emitted at simulated T=1.0 s and T=2.0 s; the first two reports are byte-identical to V-TM-03 and V-TM-04; no report before T=1.0 s. (Scope: M1b) |
+| SIM-TC-020 | SIM-REQ-HK-001, SIM-REQ-HK-004 | HK structure lifecycle (create/enable/disable) | A | V-TC-03 creates SID 2 and no SID 2 report is emitted while disabled; after V-TC-04, SID 2 reports at 5.0 s simulated intervals with parameters {P001, P003}; after V-TC-05, no further SID 2 reports; SID 1 reporting unaffected throughout. (Scope: M1b) |
+| SIM-TC-021 | SIM-REQ-HK-003 | Frontend smoke test: periodic HK visible | M | Checklist: open frontend on a freshly started simulator; without sending any TC, TM(3,25) entries appear about once per second (interactive 1:1 pacing) with decoded SID and parameter values; HK-P003 value changes between reports. Verdict + date + name recorded in milestone report. (Scope: M1b) |
 
 ## Change log
 
@@ -33,3 +37,4 @@
 |---|---|---|
 | 1 (draft) | 2026-07-12 | Initial cases for M0–M3 scope. |
 | 1 (draft) | 2026-07-12 | SIM-TC-017 added: quantum reconfiguration (M5), closes coverage gap for SIM-REQ-TIME-006 found by traceability check (PR #8). |
+| 1 (draft) | 2026-07-18 | SIM-TC-018…021 added (ST[3] housekeeping subset, scope M1b) per SCR-001. |

@@ -1,6 +1,6 @@
 # SCR-001 — Add ST[3] housekeeping subset as new increment M1b
 
-- Status: Proposed (disposition = project lead approval via merge of this PR)
+- Status: Implemented (spec level; implementation code follows in the M1b session)
 - Date: 2026-07-18
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ICD, SATSIM-SRS, SATSIM-SVS
@@ -43,5 +43,5 @@ the OBSW target at simulated-time boundaries, making time mastering
 
 ## 4. Disposition
 
-- [ ] Approved — project lead, via review and merge of the PR carrying this
-      SCR. Implementing specification PRs reference SCR-001.
+- [x] Approved — project lead (C. Möllmann), 2026-07-18, via review and merge
+      of PR #14. Implementing specification PR: #15.
