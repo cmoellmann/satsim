@@ -183,7 +183,11 @@ public final class TraceabilityCheck {
     List<Report> reports = new ArrayList<>();
     try (Stream<Path> files = Files.list(reportsDir)) {
       for (Path file : files.toList()) {
-        Matcher m = REPORT_FILE.matcher(file.getFileName().toString());
+        Path fileName = file.getFileName();
+        if (fileName == null) {
+          continue;
+        }
+        Matcher m = REPORT_FILE.matcher(fileName.toString());
         if (m.matches() && milestoneOrdinal(m.group(1)) <= milestoneOrdinal(milestone)) {
           reports.add(new Report(milestoneOrdinal(m.group(1)), file));
         }
