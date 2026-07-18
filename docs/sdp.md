@@ -54,6 +54,16 @@ ADR-0002), CCSDS 133.0-B, CCSDS 301.0-B.
 | ACT-003 | Decide ST[1] subservice subset and update ICD (OP-1). | Open | M2 |
 | ACT-004 | Extend TraceabilityCheck so a milestone gate fails when an in-scope R-verified requirement has no recorded review verdict in the milestone report (`docs/test-reports/M<n>-report.md`). Draft SRS/SVS entries per CLAUDE.md rule 3. Proposal approved 2026-07-18 (M0 gate review). | Open | M1 |
 
+### 2.3 Change control
+
+Changes to baselined scope or content of controlled documents (this SDP, SRS,
+SVS, ICD) go through a **Software Change Request**: an SCR file in
+`docs/scr/` (registered in `docs/scr/SCR-LOG.md`) records the change,
+rationale, and per-CI impact analysis. Disposition is given by the project
+lead via PR review; implementing document updates reference the SCR ID.
+Defects/nonconformances remain with the issue tracker (§2.1); ADRs remain
+governed by their own supersession rule.
+
 ## 3. Organization, Tools, Conventions
 
 - Roles: project lead (all ECSS roles: customer, supplier, PA). AI assistant
@@ -79,6 +89,7 @@ traceability matrix generated and committed, tag created, milestone checklist
 |---|---|---|
 | M0 | Walking skeleton: Maven build, CI, interface trio (`SimulationClock`, `EmulatorControl`, `SpaceLink`), loopback OBSW target implementing `EmulatorControl` (ADR-0006 C5), CRC + primary header codec | Build+CI green; V-anchors of ICD §7 pass; ≥1 traced test |
 | M1 | **Goal increment:** full TC(17,1)→TM(17,2) chain via web frontend; PUS-C TC/TM codecs against ICD §6 vectors; REST/WS API; determinism replay test (C6) | All ICD §6 vectors pass incl. negatives; manual frontend smoke test recorded; SRS M1-scope requirements all traced+passed |
+| M1b | ST[3] housekeeping subset (SCR-001): TC(3,1) create structure, TC(3,5)/(3,7) enable/disable, TM(3,25) report; default SID 1 periodic (1.0 s simulated time) enabled at startup | All ST[3] ICD vectors pass (encode+decode); periodic emission at correct simulated times verified; determinism replay green incl. HK stream; frontend smoke test shows periodic HK; SRS M1b-scope requirements all traced+passed |
 | M2 | ST[1] acceptance/completion reports; TCP length-framed space-packet link (ICD §8); ICD Issue 2 | ST[1] vectors added+passing; external client demo over TCP |
 | M3 | Native OBSW demo process (small C or Rust ST[17] responder) as second OBSW target | Same SVS validation suite green against the native OBSW target unchanged |
 | M4 | Yamcs attachment trial (MDB for ST[17]/ST[1], TCP link) | TC/TM round-trip from Yamcs UI |
