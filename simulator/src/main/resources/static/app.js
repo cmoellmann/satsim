@@ -279,6 +279,35 @@ function tcDetail(response) {
   return { groups };
 }
 
+// ICD §10.4 failure codes (TM(1,2)/TM(1,8) app data).
+const ST1_FAILURE_CODES = {
+  1: "ILLEGAL_PUS_VERSION",
+  2: "ILLEGAL_SERVICE_OR_SUBTYPE",
+  3: "ILLEGAL_APPLICATION_DATA",
+};
+
+// TM frames carry no decoded appDataHex field; the app data is sliced out of
+// the raw packet hex instead (primary header 6 octets + TM secondary header
+// 13 octets, up to the trailing 2-octet CRC, ICD §2/§4/§7).
+function tmAppDataHex(frame) {
+  const raw = frame.hex.replace(/\s/g, "");
+  const start = 2 * (6 + 13);
+  const end = raw.length - 4;
+  return start <= end ? raw.slice(start, end).toUpperCase() : "";
+}
+
+function st1VerificationGroup(frame, decoded) {
+  const appDataHex = tmAppDataHex(frame);
+  const rows = [["Request ID", appDataHex.slice(0, 8) || "(missing)"]];
+  if (decoded.subtype === 2 || decoded.subtype === 8) {
+    const codeHex = appDataHex.slice(-4);
+    const code = parseInt(codeHex, 16);
+    const name = ST1_FAILURE_CODES[code];
+    rows.push(["Failure code", codeHex ? (name ? `0x${codeHex} ${name}` : `0x${codeHex}`) : "(missing)"]);
+  }
+  return ["ST[1] verification", rows];
+}
+
 function tmDetail(frame) {
   const decoded = frame.decoded;
   const groups = [];
@@ -294,6 +323,9 @@ function tmDetail(frame) {
       ["Destination ID", decoded.destinationId],
       ["OBT", `${decoded.timeCoarse} s + ${decoded.timeFine}/65536 = ${decoded.timeSeconds.toFixed(6)} s`],
     ]]);
+    if (decoded.service === 1) {
+      groups.push(st1VerificationGroup(frame, decoded));
+    }
   } else {
     groups.push(["Not decodable", [["Note", "emitted TM failed to decode (defect)"]]]);
   }

@@ -155,9 +155,10 @@ class HmiWebApiTest {
 
   /**
    * SIM-TC-029: a CRC-broken injection yields exactly one NOT_A_PACKET
-   * rejection frame and no TM; a structurally valid TC for a service outside
-   * the tailored set (TC(2,1)) yields one ILLEGAL_SERVICE_OR_SUBTYPE
-   * rejection frame.
+   * rejection frame and no TM (ICD §6.3: no attributable request); a
+   * structurally valid TC for a service outside the tailored set (TC(2,1))
+   * yields one ILLEGAL_SERVICE_OR_SUBTYPE rejection frame and, from M1a
+   * (SCR-002), exactly one TM(1,2) failure report [SIM-REQ-VER-003].
    */
   @Test
   @TestCase("SIM-TC-029")
@@ -178,11 +179,15 @@ class HmiWebApiTest {
 
       rest.postForEntity("/api/tc", Map.of("service", 2, "subtype", 1), Map.class);
       simulation.advanceBy(QUANTUM_NANOS);
-      List<JsonNode> more = drainFrames(collector, 1);
+      List<JsonNode> more = drainFrames(collector, 2);
       List<JsonNode> moreRejections = byKind(more, "rejection");
       assertEquals(1, moreRejections.size(), "exactly one rejection frame expected");
       assertEquals("ILLEGAL_SERVICE_OR_SUBTYPE", moreRejections.get(0).get("reason").asText());
-      assertTrue(byKind(more, "tm").isEmpty(), "a rejected TC must not produce TM in M1 scope");
+      List<JsonNode> moreTms = byKind(more, "tm");
+      assertEquals(1, moreTms.size(), "exactly one TM(1,2) failure report expected (M1a, SIM-REQ-VER-003)");
+      JsonNode decoded = moreTms.get(0).get("decoded");
+      assertEquals(1, decoded.get("service").asInt());
+      assertEquals(2, decoded.get("subtype").asInt());
     } finally {
       socket.abort();
     }
