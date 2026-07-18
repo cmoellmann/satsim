@@ -23,16 +23,37 @@ body {
 header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  padding: 0.8rem 1.2rem;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.4rem;
   border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #131a24, var(--bg));
 }
 
-h1 { font-size: 1.2rem; margin: 0; }
-h1 .sub { font-size: 0.8rem; color: var(--muted); font-weight: normal; }
+h1 { font-size: 1.7rem; margin: 0; letter-spacing: 0.02em; }
+h1 .sub { font-size: 1rem; color: var(--accent); font-weight: normal; margin-left: 0.4rem; }
+.tagline { margin: 0.3rem 0 0; max-width: 34rem; font-size: 0.85rem; color: var(--muted); }
+
+.head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; }
+
+.obt {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: ui-monospace, monospace;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+}
+.obt-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; }
+.obt-utc { font-size: 1.05rem; color: var(--text); }
+.obt-seconds { font-size: 0.8rem; color: var(--accent); }
+
 h2 { font-size: 0.95rem; margin: 0 0 0.7rem; color: var(--accent); }
 
-.status { font-size: 0.8rem; }
+.status { font-size: 0.85rem; }
 .status.online { color: var(--tm); }
 .status.offline { color: var(--err); }
 
@@ -56,7 +77,7 @@ main {
 
 label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; color: var(--muted); }
 
-input[type="number"], input[type="text"] {
+input[type="number"], input[type="text"], select {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -65,6 +86,7 @@ input[type="number"], input[type="text"] {
   font-family: ui-monospace, monospace;
 }
 input[type="number"] { width: 5rem; }
+select { min-width: 11rem; }
 
 fieldset {
   border: 1px solid var(--border);
@@ -88,6 +110,15 @@ button {
   cursor: pointer;
 }
 button:hover { filter: brightness(1.15); }
+.log-controls button {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.8rem;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+.log-controls button[aria-pressed="true"] { border-color: var(--tc); color: var(--tc); }
 
 .hex {
   font-family: ui-monospace, monospace;
@@ -109,9 +140,50 @@ summary { color: var(--muted); font-size: 0.8rem; cursor: pointer; }
   margin-top: 0.5rem;
 }
 
+.log-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+.log-controls { display: flex; gap: 0.7rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.7rem; }
+.kind-filter { padding: 0.2rem 0.5rem 0.35rem; }
+.service-filter input { width: 4.2rem; }
+.hint { margin: 0 0 0.5rem; font-size: 0.75rem; color: var(--muted); }
+
 table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); }
 th { color: var(--muted); font-weight: 600; }
-td.hex-cell { font-family: ui-monospace, monospace; word-break: break-all; }
-tr.tm td:first-child { color: var(--tm); font-weight: 700; }
-tr.tc td:first-child { color: var(--tc); font-weight: 700; }
+td.hex-cell { font-family: ui-monospace, monospace; word-break: break-all; cursor: copy; }
+td.hex-cell.copied { background: #1c2a1e; }
+tbody tr:not(.detail-row) { cursor: pointer; }
+tbody tr:not(.detail-row):hover td { background: #1b222c; }
+
+.badge {
+  display: inline-block;
+  min-width: 2.6rem;
+  text-align: center;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid;
+}
+.badge.tm { color: var(--tm); border-color: var(--tm); }
+.badge.tc { color: var(--tc); border-color: var(--tc); }
+.badge.rej { color: var(--err); border-color: var(--err); }
+
+tr.detail-row td { background: #10151c; padding: 0.6rem 1rem 0.8rem; }
+.detail h3 {
+  margin: 0.5rem 0 0.2rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.detail h3:first-child { margin-top: 0; }
+.detail dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 1rem;
+  font-size: 0.8rem;
+}
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; font-family: ui-monospace, monospace; word-break: break-all; }
