@@ -80,9 +80,14 @@ class WebApiEndToEndTest {
       assertTrue(response.getStatusCode().is2xxSuccessful());
       assertEquals(V_TC_01_HEX, response.getBody().get("hex"));
 
-      String frameJson = collector.messages.poll(5, TimeUnit.SECONDS);
-      assertNotNull(frameJson, "no TM frame received on /api/tm within 5 s");
-      JsonNode frame = json.readTree(frameJson);
+      // ICD §8.2 (Issue 4): the stream also carries kind:"time" frames
+      // (incl. one on connect) — skip to the first TM frame.
+      JsonNode frame;
+      do {
+        String frameJson = collector.messages.poll(5, TimeUnit.SECONDS);
+        assertNotNull(frameJson, "no TM frame received on /api/tm within 5 s");
+        frame = json.readTree(frameJson);
+      } while (!"tm".equals(frame.get("kind").asText()));
 
       // Raw hex present and a decodable TM(17,2) on APID 100.
       String tmHex = frame.get("hex").asText();

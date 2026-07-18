@@ -310,16 +310,17 @@ classDiagram
 | `ObswTarget` | = `EmulatorControl` + `SpaceLink`. The full plug-in contract for a spacecraft-side execution environment | ADRs call this an "execution back-end" — same concept, wording frozen by ADR immutability |
 | `LoopbackTarget` | In-process reference target (ADR-0006 C5): queues incoming TCs with a fixed processing delay, maintains **slave-local time** that only advances inside `grant()`, hands due TCs to the simulated OBSW, emits resulting TM | Exercises the real grant/consume protocol from the first increment [SIM-REQ-LINK-001] — an event due exactly at the budget boundary takes precedence over budget exhaustion. TM emitted before a consumer registers is buffered, then flushed on `onTm` |
 | `SimulatedObsw` | The OBSW seam *inside* a Java-hosted target: one TC in (at an explicit simulated time), zero or more TM out | Pure with respect to time — "now" is a parameter, never pulled from a clock. This is what M3+ replaces with real OBSW behind a process boundary |
-| `PusSimulatedObsw` | The PUS-C protocol brain [SIM-REQ-PUS-008, -010]: acceptance checks in ICD §10.2 order (structure/CRC → PUS version → service/subtype), then service dispatch. M1 service set: TC(17,1) → one TM(17,2) | Owns the spacecraft-side counters [SIM-REQ-PUS-009]: TM sequence count per APID (wrap 16383), message type counter per (service, subtype) (wrap 65535). Rejected TCs are discarded without TM in M1 but recorded on an observable `rejections()` list + log [SIM-REQ-PUS-005, -006]; ST[1] failure reports take over in M1a |
+| `PusSimulatedObsw` | The PUS-C protocol brain [SIM-REQ-PUS-008, -010]: acceptance checks in ICD §10.2 order (structure/CRC → PUS version → service/subtype), then service dispatch. M1 service set: TC(17,1) → one TM(17,2) | Owns the spacecraft-side counters [SIM-REQ-PUS-009]: TM sequence count per APID (wrap 16383), message type counter per (service, subtype) (wrap 65535). Rejected TCs are discarded without TM in M1 but recorded on an observable `rejections()` list + log, and pushed to the single `onRejection` listener (feeds the ICD §8.2 rejection frames, SCR-003) [SIM-REQ-PUS-005, -006, SIM-REQ-UI-007]; ST[1] failure reports take over in M1a |
 
 #### 3.2.4 `web` — REST/WebSocket API and the thread bridge
 
 | Class | Responsibility | Notes |
 |---|---|---|
-| `SimulationService` | **The bridge between the multi-threaded web world and the single-threaded simulation** (§4). Marshals every operation onto the `sim-master` thread; encodes structured TC submissions (or passes raw hex verbatim so negative vectors reach the spacecraft side); decodes emitted TM and pushes JSON to the broadcaster [SIM-REQ-UI-003] | Also owns the **ground-side** TC sequence counter (ICD §2: TC counted by ground, wrap 16383) — deliberately separate from the spacecraft-side counters in the simulated OBSW. `previewTc` encodes without injecting and without consuming a sequence count [SIM-REQ-UI-004] |
+| `SimulationService` | **The bridge between the multi-threaded web world and the single-threaded simulation** (§4). Marshals every operation onto the `sim-master` thread; encodes structured TC submissions (or passes raw hex verbatim so negative vectors reach the spacecraft side); publishes tm/time/rejection frames (ICD §8.2) as JSON via the broadcaster [SIM-REQ-UI-003, -005, -007] | Also owns the **ground-side** TC sequence counter (ICD §2: TC counted by ground, wrap 16383) — deliberately separate from the spacecraft-side counters in the simulated OBSW. `advanceBy` chunks advances at the 100 ms *simulated* time-frame quantum, so the time-frame cadence is deterministic however callers slice their advances. `sendTc` returns the enriched ICD §8.1 response (`TcSendResponse`); `previewTc` encodes without injecting and without consuming a sequence count [SIM-REQ-UI-004, -006] |
 | `TcController` | Thin REST façade: `POST /api/tc` (inject, returns injected hex), `POST /api/tc/preview` (encode only) | `IllegalArgumentException` → HTTP 400 with error message |
-| `TmWebSocketHandler` | Session registry + broadcaster for WS `/api/tm`: every emitted TM goes to every connected session as one JSON text frame [SIM-REQ-UI-002] | Dead sessions dropped on send failure |
-| `TmFrame` (+ `TmFrame.Decoded`) | The wire DTO: raw hex + decoded header fields incl. OBT in seconds | `decoded == null` only if an emitted TM fails to decode — that is logged as a defect, never silent |
+| `TmWebSocketHandler` | Session registry + broadcaster for WS `/api/tm`: every frame goes to every connected session as one JSON text frame [SIM-REQ-UI-002] | Dead sessions dropped on send failure. A connect hook (registered by `SimulationService`) sends the current OBT as a time frame to each new session [SIM-REQ-UI-005] |
+| `TmFrame`, `TimeFrame`, `RejectionFrame` | The WS wire DTOs, discriminated by `kind` (ICD §8.2): TM (hex + decoded fields), current OBT, rejection diagnostics | `TmFrame.decoded == null` only if an emitted TM fails to decode — that is logged as a defect, never silent |
+| `TcSendResponse` (+ `.Decoded`) | The `POST /api/tc` response DTO (ICD §8.1): hex, injection OBT, sequence count, decoded TC fields or `decodeError` [SIM-REQ-UI-006] | Null fields omitted from JSON (`decodeError` only for undecodable raw injections) |
 | `TcSubmission` | The request DTO: either `hex` (raw injection) or `service`/`subtype` (+ optional `ackFlags`, `appDataHex`) [SIM-REQ-UI-001] | |
 | `WebSocketConfig` | Registers the handler at `/api/tm` | |
 
@@ -327,7 +328,7 @@ classDiagram
 
 | Class | Responsibility | Notes |
 |---|---|---|
-| `InteractivePacer` | 1:1 real-time pacing for interactive use: every `satsim.pacing.tick-millis` (default 20 ms) of wall time, request the same amount of simulated time via `SimulationService.advanceBy` | This package is the single sanctioned wall-clock location (CLAUDE.md rule 2; enforced via Checkstyle suppression scope). It is a *policy on top of* the time master: tests and scripted runs bypass it entirely and stay deterministic (SIM-TC-011) |
+| `InteractivePacer` | 1:1 real-time pacing for interactive use: every `satsim.pacing.tick-millis` (default 20 ms) of wall time, request the same amount of simulated time via `SimulationService.advanceBy`; `0` disables pacing entirely | This package is the single sanctioned wall-clock location (CLAUDE.md rule 2; enforced via Checkstyle suppression scope). It is a *policy on top of* the time master: tests and scripted runs bypass it (unit tests) or disable it (`tick-millis=0`, deterministic web-API tests SIM-TC-027..029) and stay deterministic (SIM-TC-011) |
 
 #### 3.2.6 Composition root
 
@@ -435,6 +436,12 @@ sequenceDiagram
 
 Because the loopback processing delay is 0, the TM carries exactly the
 injection-time CUC — which is what the ICD §6 reference vectors pin down.
+
+Alongside TM, the same WebSocket carries `time` frames (published inside
+`advanceBy` at every completed 100 ms of simulated time, plus once per
+session on connect) and `rejection` frames (pushed by the simulated OBSW's
+rejection listener at the simulated instant of rejection) — see ICD §8.2
+(SCR-003).
 
 ### 5.3 TC rejection
 
