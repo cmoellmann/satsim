@@ -27,6 +27,7 @@
 | Checkstyle (tool, plugin dependency) | 10.21.1 | build | LGPL-2.1-or-later | None — executes at build time only; not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #11) |
 | spotbugs-maven-plugin | 4.8.6.6 | build | Apache-2.0 | None (build plugin) | 2026-07-18, C. Möllmann (merge of PR #11) |
 | SpotBugs (tool, resolved by plugin) | 4.8.6 | build | LGPL-2.1-only | None — executes at build time only; not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #11) |
+| jacoco-maven-plugin (JaCoCo) | 0.8.12 | build | EPL-2.0 | None — build-time coverage instrumentation; agent not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #12) |
 
 Default Maven core plugins (compiler, resources, jar, install, deploy) are
 Apache-2.0 and covered by the Apache Maven entry; versions are inherited from

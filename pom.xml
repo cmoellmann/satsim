@@ -24,6 +24,7 @@
     <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
     <checkstyle.version>10.21.1</checkstyle.version>
     <spotbugs-plugin.version>4.8.6.6</spotbugs-plugin.version>
+    <jacoco-plugin.version>0.8.12</jacoco-plugin.version>
   </properties>
 
   <dependencyManagement>
@@ -69,6 +70,11 @@
             <consoleOutput>true</consoleOutput>
             <failOnViolation>true</failOnViolation>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco-plugin.version}</version>
         </plugin>
         <plugin>
           <groupId>com.github.spotbugs</groupId>
