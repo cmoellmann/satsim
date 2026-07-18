@@ -46,10 +46,18 @@ public final class TraceabilityCheck {
   public record Req(String id, String verification, int milestone) {}
 
   /** SVS test case: ID, referenced requirement IDs, automated (A) vs manual (M). */
-  public record SvsCase(String id, List<String> reqIds, boolean automated) {}
+  public record SvsCase(String id, List<String> reqIds, boolean automated) {
+    public SvsCase {
+      reqIds = List.copyOf(reqIds);
+    }
+  }
 
   /** A test method carrying traceability annotations. */
-  public record TestMethod(String testCaseId, List<String> reqIds, String location) {}
+  public record TestMethod(String testCaseId, List<String> reqIds, String location) {
+    public TestMethod {
+      reqIds = List.copyOf(reqIds);
+    }
+  }
 
   /** A finding; {@code error} findings fail even outside gate mode. */
   public record Finding(String code, String message, boolean error) {

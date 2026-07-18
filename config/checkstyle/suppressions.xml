@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+  Wall-clock ban suppressions (see config/checkstyle/checkstyle.xml).
+
+  The only sanctioned wall-clock user in SatSim is the interactive pacing
+  policy (ADR-0006 / CLAUDE.md rule 2): it paces the simulation against
+  real time for human-in-the-loop use and is explicitly carved out as
+  infrastructure, not simulation logic. That policy lives (once implemented)
+  under the org.satsim.sim.pacing package.
+
+  All simulation-time logic elsewhere must keep sourcing time only from
+  SimulationClock. Any further suppression of the WallClockBan* checks
+  requires a reviewed PR that states the justification inline in this file.
+-->
+<suppressions>
+  <suppress id="WallClockBan" files="[/\\]org[/\\]satsim[/\\]sim[/\\]pacing[/\\]"/>
+</suppressions>
