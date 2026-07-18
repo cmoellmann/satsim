@@ -157,6 +157,10 @@ function addRow(kind, obt, type, seq, ctr, hex, service, detail) {
   row.dataset.kind = kind;
   row.dataset.service = service === null || service === undefined ? "" : String(service);
   row.dataset.detail = JSON.stringify(detail);
+  const chevron = document.createElement("td");
+  chevron.className = "chev";
+  chevron.textContent = "▸";
+  row.appendChild(chevron);
   const badge = document.createElement("td");
   const pill = document.createElement("span");
   pill.className = `badge ${kind.toLowerCase()}`;
@@ -207,17 +211,28 @@ logBody.addEventListener("click", (event) => {
   const existing = row.nextElementSibling;
   if (existing && existing.classList.contains("detail-row")) {
     existing.remove();
+    setExpanded(row, false);
     return;
   }
   document.querySelectorAll("tr.detail-row").forEach((detailRow) => detailRow.remove());
+  document.querySelectorAll("tr.expanded").forEach((open) => setExpanded(open, false));
   const detailRow = document.createElement("tr");
   detailRow.className = "detail-row";
   const cell = document.createElement("td");
-  cell.colSpan = 6;
+  cell.colSpan = 7;
   cell.appendChild(renderDetail(JSON.parse(row.dataset.detail)));
   detailRow.appendChild(cell);
   row.after(detailRow);
+  setExpanded(row, true);
 });
+
+function setExpanded(row, expanded) {
+  row.classList.toggle("expanded", expanded);
+  const chevron = row.querySelector("td.chev");
+  if (chevron) {
+    chevron.textContent = expanded ? "▾" : "▸";
+  }
+}
 
 function renderDetail(detail) {
   const container = document.createElement("div");
