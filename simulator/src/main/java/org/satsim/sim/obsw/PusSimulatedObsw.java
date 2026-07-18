@@ -14,7 +14,7 @@ import org.satsim.pus.tm.TmPacket;
 import org.satsim.pus.tm.TmSecondaryHeader;
 
 /**
- * PUS-C application of the simulated spacecraft, tailored per the ICD: single
+ * The PUS-C implementation of the simulated on-board software, tailored per the ICD: single
  * APID 100 (ADR-0003), strict PUS-C (ADR-0002). M1 service set: ST[17]
  * connection test — a valid TC(17,1) yields exactly one TM(17,2)
  * [SIM-REQ-PUS-008, SIM-REQ-PUS-010].
@@ -34,7 +34,7 @@ import org.satsim.pus.tm.TmSecondaryHeader;
  * <p>Not thread-safe: owned by its OBSW target, which is driven solely by the
  * time master (ADR-0006).
  */
-public final class PusSpacecraftApplication implements SpacecraftApplication {
+public final class PusSimulatedObsw implements SimulatedObsw {
 
   /** Why a TC was discarded (M1); aligns with the ICD §10.4 codes for M1a. */
   public enum RejectReason {
@@ -52,7 +52,7 @@ public final class PusSpacecraftApplication implements SpacecraftApplication {
   /** The single APID of the simulated spacecraft (ICD §2, ADR-0003). */
   public static final int APID = 100;
 
-  private static final Logger LOG = Logger.getLogger(PusSpacecraftApplication.class.getName());
+  private static final Logger LOG = Logger.getLogger(PusSimulatedObsw.class.getName());
   private static final HexFormat HEX = HexFormat.of();
 
   private final List<Rejection> rejections = new ArrayList<>();

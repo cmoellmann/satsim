@@ -15,7 +15,7 @@ import org.satsim.pus.PacketDecodeException;
 import org.satsim.pus.tc.TcPacket;
 import org.satsim.pus.tc.TcSecondaryHeader;
 import org.satsim.pus.tm.TmPacket;
-import org.satsim.sim.obsw.PusSpacecraftApplication;
+import org.satsim.sim.obsw.PusSimulatedObsw;
 import org.satsim.sim.time.SimulationScheduler;
 import org.springframework.stereotype.Service;
 
@@ -127,7 +127,7 @@ public final class SimulationService {
     if (consumeSequenceCount) {
       groundSequenceCount = (groundSequenceCount + 1) & 0x3FFF;
     }
-    return TcPacket.of(PusSpacecraftApplication.APID, sequenceCount, sec, appData).encode();
+    return TcPacket.of(PusSimulatedObsw.APID, sequenceCount, sec, appData).encode();
   }
 
   private void publishTm(byte[] tmPacket) {
