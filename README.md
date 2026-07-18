@@ -33,8 +33,8 @@ SatSim is two experiments in one.
   [M0 report](docs/test-reports/M0-report.md) records per-case verdicts,
   coverage, a full traceability matrix, and — for review-verified
   requirements — human verdicts with the evidence down to reproducible grep
-  commands. A registered process action (ACT-004) will make future gates
-  *fail* if a review verdict is ever missing.
+  commands. Since M1, the gate *fails* if a review verdict is ever missing
+  (ACT-004): review obligations are machine-checked, same as test coverage.
 - **Design rules are build-enforced.** The simulation-time rule (no wall-clock
   access — time comes only from `SimulationClock`, [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md))
   is a Checkstyle forbidden-API gate with exactly one sanctioned, documented
@@ -82,7 +82,7 @@ SatSim is two experiments in one.
 | Architecture decisions (ADR) | [docs/adr/DECISION-LOG.md](docs/adr/DECISION-LOG.md) | Immutable decision log; [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) (simulation time ownership) as the full-form sample |
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
-| M0 milestone test report | [docs/test-reports/M0-report.md](docs/test-reports/M0-report.md) | Gate record: test results, coverage, traceability matrix, human review verdicts |
+| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 
@@ -128,15 +128,46 @@ human-approved reference vectors, eight new [SRS](docs/srs.md) requirements,
 nine new/amended [SVS](docs/svs.md) cases); implementation follows in the
 M1a/M1b sessions.
 
-**Next: M1** — the full TC(17,1) → TM(17,2) chain through the web frontend,
-PUS-C TC/TM codecs validated against the ICD §6 reference vectors, REST/WS
-API, and a determinism replay test (see [SDP §4](docs/sdp.md)); then **M1a**
-(verification) and **M1b** (housekeeping) implement the approved SCR scopes.
+**Milestone M1 (TC(17,1)→TM(17,2) goal increment) closed 2026-07-18** — same
+day as M0, five reviewed PRs. The simulator now *runs*: a Spring Boot backend
+with a thin web console, speaking byte-exact PUS-C. Gate record:
+[M1 milestone test report](docs/test-reports/M1-report.md).
+
+- **87/87 tests green**; pus-core line coverage **95.74 %** (indicative
+  target 80 %).
+- **Byte-exact against the ICD end-to-end**: encoders reproduce reference
+  vectors V-TC-01/02 and V-TM-01/02 to the last CRC byte; the frontend's
+  compose preview of a fresh ping *is* V-TC-01; negative vectors are
+  rejected exactly as specified (bad CRC silently, wrong PUS version
+  observably).
+- **Determinism replay proven** (ADR-0006 C6): two identical scripted runs
+  produce SHA-256-identical TM streams, timestamps included — the payoff of
+  the build-enforced wall-clock ban.
+- **The gate now audits its reviewers** (ACT-004 closed): a missing human
+  review verdict fails CI; a recorded reviewed-FAIL fails any build.
+- **Codec layer implemented by the delegated Sonnet agent** from a fixed API
+  spec, reviewed byte-by-byte in the main session — the tiered-staffing
+  policy exercised on real scope.
+
+**Next: M1a** (ST[1] request verification, SCR-002), then **M1b** (ST[3]
+housekeeping, SCR-001) — both fully specified with human-approved vectors.
 
 ## Getting started
 
 Build: `./mvnw -q verify` (Java 21; Maven 3.9.11 via committed wrapper — no
 network resources required at test time).
+
+Run the simulator:
+
+```
+./mvnw -q package
+java -jar simulator/target/simulator-0.1.0-SNAPSHOT.jar
+```
+
+then open http://localhost:8090 — compose a TC(17,1) ping (the hex preview
+shows the exact ICD vector), send it, and watch the TM(17,2) response arrive
+in the live log. REST/WebSocket API per [ICD §8](docs/icd.md): `POST /api/tc`,
+WS `/api/tm`.
 
 For a quick tour of the methodology, read
 [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) for a sample of the
