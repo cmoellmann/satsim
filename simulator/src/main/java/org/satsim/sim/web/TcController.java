@@ -25,10 +25,13 @@ public class TcController {
     this.simulation = simulation;
   }
 
-  /** Injects the submitted TC; responds with the injected packet's hex. */
+  /**
+   * Injects the submitted TC; responds with hex, injection OBT, sequence
+   * count and decoded fields per ICD §8.1 [SIM-REQ-UI-006].
+   */
   @PostMapping
-  public Map<String, String> send(@RequestBody TcSubmission submission) {
-    return Map.of("hex", simulation.sendTc(submission));
+  public TcSendResponse send(@RequestBody TcSubmission submission) {
+    return simulation.sendTc(submission);
   }
 
   /** Encodes without injecting (frontend hex preview). */

@@ -3,11 +3,17 @@ package org.satsim.sim.web;
 import org.satsim.pus.tm.TmPacket;
 
 /**
- * WebSocket TM frame (ICD §8): raw packet hex plus decoded header fields
- * [SIM-REQ-UI-002, SIM-REQ-UI-003]. {@code decoded} is null only if an
- * emitted TM unexpectedly fails to decode (logged as a defect).
+ * WebSocket TM frame (ICD §8.2, {@code kind:"tm"}): raw packet hex plus
+ * decoded header fields [SIM-REQ-UI-002, SIM-REQ-UI-003]. {@code decoded} is
+ * null only if an emitted TM unexpectedly fails to decode (logged as a
+ * defect).
  */
-public record TmFrame(String hex, Decoded decoded) {
+public record TmFrame(String kind, String hex, Decoded decoded) {
+
+  /** Builds a {@code kind:"tm"} frame. */
+  public TmFrame(String hex, Decoded decoded) {
+    this("tm", hex, decoded);
+  }
 
   /** Decoded primary and TM secondary header fields per ICD §2/§4/§5. */
   public record Decoded(

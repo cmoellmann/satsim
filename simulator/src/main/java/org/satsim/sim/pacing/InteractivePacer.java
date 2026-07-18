@@ -42,8 +42,13 @@ public final class InteractivePacer {
 
   @PostConstruct
   void start() {
-    if (tickMillis <= 0) {
-      throw new IllegalStateException("satsim.pacing.tick-millis must be > 0: " + tickMillis);
+    if (tickMillis < 0) {
+      throw new IllegalStateException("satsim.pacing.tick-millis must be >= 0: " + tickMillis);
+    }
+    if (tickMillis == 0) {
+      // Pacing disabled: simulated time advances only on explicit
+      // SimulationService.advanceBy calls (deterministic web tests, SIM-TC-027..029).
+      return;
     }
     long tickNanos = tickMillis * 1_000_000L;
     ticker.scheduleAtFixedRate(

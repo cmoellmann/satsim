@@ -46,8 +46,12 @@ public final class PusSimulatedObsw implements SimulatedObsw {
     ILLEGAL_SERVICE_OR_SUBTYPE
   }
 
-  /** One observable TC rejection (SIM-TC-006: log/queue observability). */
-  public record Rejection(RejectReason reason, String packetHex) {}
+  /**
+   * One observable TC rejection (SIM-TC-006: log/queue observability;
+   * SIM-REQ-UI-007: rejection frames). {@code nanos} is the simulated time
+   * at which the TC was rejected.
+   */
+  public record Rejection(RejectReason reason, String packetHex, long nanos) {}
 
   /** The single APID of the simulated spacecraft (ICD §2, ADR-0003). */
   public static final int APID = 100;
@@ -58,6 +62,7 @@ public final class PusSimulatedObsw implements SimulatedObsw {
   private final List<Rejection> rejections = new ArrayList<>();
   private final Map<Integer, Integer> typeCounters = new HashMap<>();
   private int tmSequenceCount;
+  private java.util.function.Consumer<Rejection> rejectionListener;
 
   @Override
   public List<byte[]> handleTc(byte[] tcPacket, long nowNanos) {
@@ -65,17 +70,17 @@ public final class PusSimulatedObsw implements SimulatedObsw {
     try {
       tc = TcPacket.decode(tcPacket);
     } catch (PacketDecodeException e) {
-      reject(RejectReason.NOT_A_PACKET, tcPacket, e.getMessage());
+      reject(RejectReason.NOT_A_PACKET, tcPacket, e.getMessage(), nowNanos);
       return List.of();
     }
     TcSecondaryHeader sec = tc.secondaryHeader();
     if (sec.pusVersion() != TcSecondaryHeader.PUS_C_VERSION) {
-      reject(RejectReason.ILLEGAL_PUS_VERSION, tcPacket, "PUS version " + sec.pusVersion());
+      reject(RejectReason.ILLEGAL_PUS_VERSION, tcPacket, "PUS version " + sec.pusVersion(), nowNanos);
       return List.of();
     }
     if (sec.serviceType() != 17 || sec.messageSubtype() != 1) {
       reject(RejectReason.ILLEGAL_SERVICE_OR_SUBTYPE, tcPacket,
-          "TC(" + sec.serviceType() + "," + sec.messageSubtype() + ") not implemented");
+          "TC(" + sec.serviceType() + "," + sec.messageSubtype() + ") not implemented", nowNanos);
       return List.of();
     }
     return List.of(buildTm(17, 2, new byte[0], nowNanos));
@@ -87,6 +92,15 @@ public final class PusSimulatedObsw implements SimulatedObsw {
    */
   public List<Rejection> rejections() {
     return List.copyOf(rejections);
+  }
+
+  /**
+   * Registers the single listener notified of every rejection as it occurs
+   * (on the simulation thread), in addition to the {@link #rejections()}
+   * queue. Feeds the ICD §8.2 rejection frames [SIM-REQ-UI-007].
+   */
+  public void onRejection(java.util.function.Consumer<Rejection> listener) {
+    this.rejectionListener = listener;
   }
 
   /**
@@ -121,11 +135,14 @@ public final class PusSimulatedObsw implements SimulatedObsw {
     return tm.encode();
   }
 
-  private void reject(RejectReason reason, byte[] tcPacket, String detail) {
-    Rejection rejection = new Rejection(reason, HEX.formatHex(tcPacket));
+  private void reject(RejectReason reason, byte[] tcPacket, String detail, long nowNanos) {
+    Rejection rejection = new Rejection(reason, HEX.formatHex(tcPacket), nowNanos);
     rejections.add(rejection);
     LOG.warning(() -> "TC rejected (" + reason + "): " + detail
         + " [" + rejection.packetHex() + "]");
+    if (rejectionListener != null) {
+      rejectionListener.accept(rejection);
+    }
   }
 
   private static int typeKey(int serviceType, int messageSubtype) {

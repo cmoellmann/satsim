@@ -24,11 +24,15 @@ import org.springframework.stereotype.Service;
  * (single-threaded, ADR-0006) {@link SimulationScheduler} onto one dedicated
  * simulation thread. TCs submitted via REST are encoded (structured compose)
  * or passed verbatim (raw hex, so negative vectors can be injected) and enter
- * the simulation at the current simulated time; TM is decoded, serialized to
- * JSON and pushed to the WebSocket broadcaster [SIM-REQ-UI-003].
+ * the simulation at the current simulated time; TM, time and rejection frames
+ * (ICD §8.2) are serialized to JSON and pushed to the WebSocket broadcaster
+ * [SIM-REQ-UI-003, SIM-REQ-UI-005, SIM-REQ-UI-007].
  *
  * <p>Time advances only via {@link #advanceBy(long)}, called by the pacing
- * policy; this class never reads the wall clock [SIM-REQ-TIME-001]. Ground TC
+ * policy; this class never reads the wall clock [SIM-REQ-TIME-001]. Time
+ * frames are published at the ICD §8.2 quantum of 100 ms <em>simulated</em>
+ * time: advances are chunked at quantum boundaries, so the cadence is
+ * deterministic regardless of how callers slice their advances. Ground TC
  * sequence counts are counted here per APID (ICD §2: TC counted by ground)
  * and wrap at 16383.
  */
@@ -39,7 +43,11 @@ public final class SimulationService {
   private static final HexFormat HEX = HexFormat.of();
   private static final long SUBMIT_TIMEOUT_SECONDS = 5;
 
+  /** Time-frame publication quantum in simulated nanoseconds (ICD §8.2). */
+  private static final long TIME_FRAME_QUANTUM_NANOS = 100_000_000L;
+
   private final SimulationScheduler scheduler;
+  private final PusSimulatedObsw obsw;
   private final TmWebSocketHandler tmBroadcaster;
   /** Own instance: TM frames are plain records, no context-wide customization needed. */
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -51,17 +59,26 @@ public final class SimulationService {
       });
 
   private int groundSequenceCount;
+  /** Simulated time of the next due time frame; touched only on the sim thread. */
+  private long nextTimeFrameNanos;
 
-  public SimulationService(SimulationScheduler scheduler, TmWebSocketHandler tmBroadcaster) {
+  public SimulationService(
+      SimulationScheduler scheduler, PusSimulatedObsw obsw, TmWebSocketHandler tmBroadcaster) {
     this.scheduler = scheduler;
+    this.obsw = obsw;
     this.tmBroadcaster = tmBroadcaster;
   }
 
   @PostConstruct
   void start() {
+    tmBroadcaster.onSessionConnect(session ->
+        simThread.execute(() ->
+            tmBroadcaster.sendTo(session, toJson(TimeFrame.ofNanos(scheduler.clock().nanos())))));
     onSimThread(() -> {
       scheduler.onTm(this::publishTm);
+      obsw.onRejection(rejection -> broadcast(RejectionFrame.of(rejection)));
       scheduler.start();
+      nextTimeFrameNanos = scheduler.clock().nanos() + TIME_FRAME_QUANTUM_NANOS;
       return null;
     });
   }
@@ -81,15 +98,28 @@ public final class SimulationService {
 
   /**
    * Encodes (structured) or parses (raw hex) the submission, injects the
-   * packet at the current simulated time, and returns the injected packet's
-   * hex. Raw hex is injected verbatim — deliberately without validation — so
-   * negative vectors exercise the spacecraft-side rejection path.
+   * packet at the current simulated time, and returns the ICD §8.1 response:
+   * hex, injection OBT, sequence count and decoded fields (or the first
+   * failed §6.3 check for undecodable raw injections) [SIM-REQ-UI-006]. Raw
+   * hex is injected verbatim — deliberately without validation — so negative
+   * vectors exercise the spacecraft-side rejection path.
    */
-  public String sendTc(TcSubmission submission) {
+  public TcSendResponse sendTc(TcSubmission submission) {
     return onSimThread(() -> {
       byte[] packet = toPacket(submission, true);
       scheduler.injectTc(packet);
-      return HEX.formatHex(packet);
+      Integer sequenceCount = null;
+      TcSendResponse.Decoded decoded = null;
+      String decodeError = null;
+      try {
+        TcPacket tc = TcPacket.decode(packet);
+        decoded = TcSendResponse.Decoded.of(tc);
+        sequenceCount = tc.primaryHeader().sequenceCount();
+      } catch (PacketDecodeException e) {
+        decodeError = e.reason().name();
+      }
+      return TcSendResponse.of(
+          HEX.formatHex(packet), scheduler.clock().nanos(), sequenceCount, decoded, decodeError);
     });
   }
 
@@ -103,11 +133,24 @@ public final class SimulationService {
   }
 
   /**
-   * Advances simulated time by {@code deltaNanos} on the simulation thread.
-   * Called by the interactive pacing policy.
+   * Advances simulated time by {@code deltaNanos} on the simulation thread,
+   * chunked at the time-frame quantum boundaries so a time frame is published
+   * for every completed 100 ms of simulated time (ICD §8.2,
+   * [SIM-REQ-UI-005]). Called by the interactive pacing policy.
    */
   public void advanceBy(long deltaNanos) {
-    simThread.execute(() -> scheduler.advanceBy(deltaNanos));
+    simThread.execute(() -> {
+      long remaining = deltaNanos;
+      while (remaining > 0) {
+        long step = Math.min(remaining, nextTimeFrameNanos - scheduler.clock().nanos());
+        scheduler.advanceBy(step);
+        remaining -= step;
+        if (scheduler.clock().nanos() >= nextTimeFrameNanos) {
+          broadcast(TimeFrame.ofNanos(scheduler.clock().nanos()));
+          nextTimeFrameNanos += TIME_FRAME_QUANTUM_NANOS;
+        }
+      }
+    });
   }
 
   private byte[] toPacket(TcSubmission submission, boolean consumeSequenceCount) {
@@ -138,11 +181,18 @@ public final class SimulationService {
     } catch (PacketDecodeException e) {
       LOG.severe(() -> "emitted TM failed to decode: " + e.getMessage());
     }
+    broadcast(new TmFrame(HEX.formatHex(tmPacket), decoded));
+  }
+
+  private void broadcast(Object frame) {
+    tmBroadcaster.broadcast(toJson(frame));
+  }
+
+  private String toJson(Object frame) {
     try {
-      tmBroadcaster.broadcast(
-          objectMapper.writeValueAsString(new TmFrame(HEX.formatHex(tmPacket), decoded)));
+      return objectMapper.writeValueAsString(frame);
     } catch (JsonProcessingException e) {
-      LOG.severe(() -> "TM frame JSON serialization failed: " + e.getMessage());
+      throw new IllegalStateException("frame JSON serialization failed", e);
     }
   }
 
