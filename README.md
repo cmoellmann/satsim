@@ -82,7 +82,7 @@ SatSim is two experiments in one.
 | Architecture decisions (ADR) | [docs/adr/DECISION-LOG.md](docs/adr/DECISION-LOG.md) | Immutable decision log; [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) (simulation time ownership) as the full-form sample |
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
-| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md)): test results, coverage, traceability matrix, human review verdicts |
+| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md), [M1a](docs/test-reports/M1a-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 
@@ -149,8 +149,29 @@ with a thin web console, speaking byte-exact PUS-C. Gate record:
   spec, reviewed byte-by-byte in the main session — the tiered-staffing
   policy exercised on real scope.
 
-**Next: M1a** (ST[1] request verification, SCR-002), then **M1b** (ST[3]
-housekeeping, SCR-001) — both fully specified with human-approved vectors.
+**Milestone M1a (HMI package + ST[1] request verification) closed
+2026-07-18** — the two dispositioned change requests aimed at the first-use
+experience, delivered under one gate. Gate record:
+[M1a milestone test report](docs/test-reports/M1a-report.md).
+
+- **The console now feels like a ground segment** (SCR-003): a running OBT
+  clock driven by kind-discriminated WebSocket frames whose 100 ms cadence
+  is defined in *simulated* time — smooth at 1:1 pacing, byte-predictable
+  in CI; TC rejections as first-class log rows; a field-level packet detail
+  view; Type/Subtype dropdowns fed by the tailored service set.
+- **Every command is visibly acknowledged** (SCR-002): TM(1,1) acceptance
+  and TM(1,7) completion reports gated by the TC's acknowledgement flags,
+  TM(1,2) failure reports always — all six new ICD reference vectors
+  reproduced byte-identically on the first test run. The determinism replay
+  stream nearly tripled (42 → 119 octets) and stayed SHA-256-identical.
+- **93/93 tests green**; pus-core line coverage **95.74 %**.
+- **The gate caught its own PR**: the first CI run failed with a
+  traceability finding (two test methods claiming one SVS case) — exactly
+  the class of drift the gate exists to prevent, fixed before merge.
+
+**Next: M1b** (ST[3] housekeeping, SCR-001) — fully specified with
+human-approved vectors; first telemetry flows before the user sends
+anything.
 
 ## Getting started
 
