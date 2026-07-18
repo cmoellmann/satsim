@@ -28,6 +28,10 @@ import java.util.stream.Stream;
  *   <li>{@code DUP-TEST} — more than one implementing test for one SVS case (error)</li>
  *   <li>{@code SVS-NO-TEST} — in-scope automated SVS case without implementing test</li>
  *   <li>{@code REQ-NO-SVS} — in-scope test-verified requirement not referenced by any SVS case</li>
+ *   <li>{@code REQ-REVIEW-FAIL} — in-scope review-verified requirement with a recorded
+ *       reviewed-FAIL verdict (error)</li>
+ *   <li>{@code REQ-NO-REVIEW} — in-scope review-verified requirement without a recorded
+ *       review verdict in the milestone test reports (ACT-004)</li>
  * </ul>
  *
  * <p>Scope: an SVS case is in scope of milestone N if the highest milestone of
@@ -36,8 +40,12 @@ import java.util.stream.Stream;
  * manual SVS cases (type M) are exempt from {@code SVS-NO-TEST} (their
  * verdicts are recorded in the milestone report, SDP §5).
  *
- * <p>Errors always fail the run; the two coverage findings fail only in
- * {@code --gate} mode (SDP §5: build warning, failure at milestone gate).
+ * <p>Errors always fail the run; the coverage findings (including
+ * {@code REQ-NO-REVIEW}) fail only in {@code --gate} mode (SDP §5: build
+ * warning, failure at milestone gate). Review verdicts are read cumulatively
+ * from all {@code docs/test-reports/M*-report.md} files whose milestone label
+ * is within scope, so a verdict recorded at an earlier gate (e.g. M0) still
+ * counts at later gates; later reports override earlier ones per requirement.
  * JDK-only, no third-party dependencies (CLAUDE.md rule 8).
  */
 public final class TraceabilityCheck {
@@ -81,6 +89,9 @@ public final class TraceabilityCheck {
       Pattern.compile("^\\s*(?:public\\s+|private\\s+|protected\\s+)?\\w[\\w<>\\[\\]]*\\s+\\w+\\s*\\(");
 
   private static final Pattern MILESTONE_LABEL = Pattern.compile("M(\\d+)([a-i])?");
+  private static final Pattern REVIEW_VERDICT = Pattern.compile(
+      "(SIM-REQ-[A-Z]+-\\d+).*?reviewed-(PASS|FAIL)", Pattern.CASE_INSENSITIVE);
+  private static final Pattern REPORT_FILE = Pattern.compile("(M\\d+[a-i]?)-report\\.md");
 
   private TraceabilityCheck() {
   }
@@ -135,6 +146,54 @@ public final class TraceabilityCheck {
       cases.put(id, new SvsCase(id, reqIds, automated));
     }
     return cases;
+  }
+
+  /**
+   * Parses recorded review verdicts from a milestone test report: any line
+   * containing a requirement ID followed by {@code reviewed-PASS} or
+   * {@code reviewed-FAIL} (case-insensitive; matches both the §5 verdict
+   * headings and traceability-matrix rows, see docs/test-reports/). Returns
+   * requirement ID → normalized verdict ("PASS"/"FAIL").
+   */
+  public static Map<String, String> parseReviewVerdicts(Path reportFile) throws IOException {
+    Map<String, String> verdicts = new HashMap<>();
+    for (String line : Files.readAllLines(reportFile, StandardCharsets.UTF_8)) {
+      Matcher m = REVIEW_VERDICT.matcher(line);
+      while (m.find()) {
+        verdicts.put(m.group(1), m.group(2).toUpperCase(java.util.Locale.ROOT));
+      }
+    }
+    return verdicts;
+  }
+
+  /**
+   * Collects review verdicts cumulatively from all
+   * {@code M<label>-report.md} files in {@code reportsDir} whose milestone
+   * ordinal is &le; the scope ordinal, in ascending milestone order (later
+   * reports override earlier verdicts per requirement). An absent directory
+   * yields no verdicts.
+   */
+  public static Map<String, String> collectReviewVerdicts(Path reportsDir, String milestone)
+      throws IOException {
+    Map<String, String> verdicts = new HashMap<>();
+    if (!Files.isDirectory(reportsDir)) {
+      return verdicts;
+    }
+    record Report(int ordinal, Path file) {}
+    List<Report> reports = new ArrayList<>();
+    try (Stream<Path> files = Files.list(reportsDir)) {
+      for (Path file : files.toList()) {
+        Matcher m = REPORT_FILE.matcher(file.getFileName().toString());
+        if (m.matches() && milestoneOrdinal(m.group(1)) <= milestoneOrdinal(milestone)) {
+          reports.add(new Report(milestoneOrdinal(m.group(1)), file));
+        }
+      }
+    }
+    reports.sort((a, b) -> Integer.compare(a.ordinal(), b.ordinal()));
+    for (Report report : reports) {
+      verdicts.putAll(parseReviewVerdicts(report.file()));
+    }
+    return verdicts;
   }
 
   /**
@@ -197,9 +256,13 @@ public final class TraceabilityCheck {
     }
   }
 
-  /** Runs all consistency checks for the given milestone scope (label, e.g. "M1b"). */
+  /**
+   * Runs all consistency checks for the given milestone scope (label, e.g.
+   * "M1b"). {@code reviewVerdicts} maps requirement IDs to recorded review
+   * verdicts ("PASS"/"FAIL"), see {@link #collectReviewVerdicts} (ACT-004).
+   */
   public static List<Finding> check(Map<String, Req> reqs, Map<String, SvsCase> cases,
-      List<TestMethod> tests, String milestone) {
+      List<TestMethod> tests, String milestone, Map<String, String> reviewVerdicts) {
     int scopeOrdinal = milestoneOrdinal(milestone);
     List<Finding> findings = new ArrayList<>();
 
@@ -251,6 +314,17 @@ public final class TraceabilityCheck {
             req.id() + " (" + req.milestone() + ", verification " + req.verification()
                 + ") is not referenced by any SVS case", false));
       }
+      if (milestoneOrdinal(req.milestone()) <= scopeOrdinal && req.verification().contains("R")) {
+        String verdict = reviewVerdicts.get(req.id());
+        if (verdict == null) {
+          findings.add(new Finding("REQ-NO-REVIEW",
+              req.id() + " (" + req.milestone() + ", verification " + req.verification()
+                  + ") has no recorded review verdict in the milestone test reports", false));
+        } else if (verdict.equals("FAIL")) {
+          findings.add(new Finding("REQ-REVIEW-FAIL",
+              req.id() + " has a recorded reviewed-FAIL verdict", true));
+        }
+      }
     }
 
     findings.sort((a, b) -> Boolean.compare(b.error(), a.error()));
@@ -284,7 +358,8 @@ public final class TraceabilityCheck {
         parseSrs(root.resolve("docs/srs.md")),
         parseSvs(root.resolve("docs/svs.md")),
         scanTests(testDirs),
-        milestone);
+        milestone,
+        collectReviewVerdicts(root.resolve("docs/test-reports"), milestone));
 
     findings.forEach(f -> System.out.println(f.toString()));
     boolean fail = findings.stream().anyMatch(Finding::error) || (gate && !findings.isEmpty());

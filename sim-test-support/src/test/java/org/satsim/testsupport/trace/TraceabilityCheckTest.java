@@ -21,7 +21,8 @@ class TraceabilityCheckTest {
         TraceabilityCheck.parseSrs(base.resolve("srs.md")),
         TraceabilityCheck.parseSvs(base.resolve("svs.md")),
         TraceabilityCheck.scanTests(List.of(base.resolve("tests"))),
-        "M0");
+        "M0",
+        TraceabilityCheck.collectReviewVerdicts(base, "M0"));
   }
 
   private static void assertFinding(List<Finding> findings, String code, String subject) {
@@ -56,7 +57,40 @@ class TraceabilityCheckTest {
     assertEquals(List.of(), run("clean"));
   }
 
+  /**
+   * SIM-TC-026: an R-verified in-scope requirement without recorded review
+   * verdict yields REQ-NO-REVIEW (gate-failing); a recorded reviewed-FAIL
+   * yields an error finding; reviewed-PASS verdicts stay silent (the clean
+   * set remains clean, re-checked by SIM-TC-014).
+   */
+  @Test
+  @TestCase("SIM-TC-026")
+  @Requirement("SIM-REQ-QA-003")
+  void gateFailsOnMissingOrFailedReviewVerdicts() throws IOException {
+    List<Finding> findings = run("broken");
+
+    assertFinding(findings, "REQ-NO-REVIEW", "SIM-REQ-FIX-006");
+    assertTrue(
+        findings.stream()
+            .anyMatch(f -> f.code().equals("REQ-NO-REVIEW") && !f.error()),
+        "REQ-NO-REVIEW must be a coverage finding (gate-failing, not an error): " + findings);
+    assertFinding(findings, "REQ-REVIEW-FAIL", "SIM-REQ-FIX-007");
+    assertTrue(
+        findings.stream().anyMatch(f -> f.code().equals("REQ-REVIEW-FAIL") && f.error()),
+        "REQ-REVIEW-FAIL must be an error finding: " + findings);
+    // The reviewed-PASS requirement stays silent.
+    assertNoFinding(findings, "SIM-REQ-FIX-003");
+  }
+
   // Untraced unit tests (engineering hygiene, SDP §5).
+
+  @Test
+  void reviewVerdictsParseHeadingsAndMatrixRows() throws IOException {
+    var verdicts = TraceabilityCheck.collectReviewVerdicts(FIXTURES.resolve("broken"), "M0");
+    assertEquals("PASS", verdicts.get("SIM-REQ-FIX-003"));
+    assertEquals("FAIL", verdicts.get("SIM-REQ-FIX-007"));
+    assertEquals(null, verdicts.get("SIM-REQ-FIX-006"));
+  }
 
   @Test
   void detectsDuplicateImplementingTests() throws IOException {

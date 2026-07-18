@@ -7,3 +7,5 @@
 | SIM-REQ-FIX-003 | Review-verified; exempt from coverage check. | Design constraint | R | M0 | fixture |
 | SIM-REQ-FIX-004 | Out of scope (future milestone). | Functional | T | M2 | fixture |
 | SIM-REQ-FIX-005 | Out of scope (inserted increment M1b). | Functional | T | M1b | fixture |
+| SIM-REQ-FIX-006 | Review-verified, in scope, no recorded review verdict. | Design constraint | R | M0 | fixture |
+| SIM-REQ-FIX-007 | Review-verified, in scope, recorded reviewed-FAIL verdict. | Design constraint | R | M0 | fixture |
