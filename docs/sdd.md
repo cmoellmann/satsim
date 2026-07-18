@@ -28,8 +28,8 @@ References: `docs/icd.md` (packet formats §2–§7, web API §8),
 Conventions in this document:
 
 - **Ground side** = browser frontend + Spring web layer. **Space side** =
-  everything behind the `SpaceLink` seam (OBSW target + spacecraft
-  application).
+  everything behind the `SpaceLink` seam (OBSW target + simulated
+  OBSW).
 - Arrows in diagrams point in the direction of *calls*, not data flow, unless
   labelled otherwise.
 - "Simulated time" is always nanoseconds since the epoch 2026-01-01T00:00:00
@@ -60,7 +60,7 @@ flowchart LR
       SCHED["SimulationScheduler<br/>(time master, ADR-0006)"]
       CLK["ManualSimulationClock<br/>(the master clock)"]
       TGT["LoopbackTarget<br/>(OBSW target)"]
-      APP["PusSpacecraftApplication<br/>(the 'spacecraft OBSW')"]
+      APP["PusSimulatedObsw<br/>(the simulated OBSW)"]
     end
   end
   subgraph "pus-core module (JDK only)"
@@ -97,9 +97,9 @@ The load-bearing ideas, each fixed by an ADR:
 3. **The packet library is inert** (CLAUDE.md rule 5). `pus-core` contains
    pure, framework-free value types and codecs. It never does I/O, never
    knows about time sources, Spring, or threads. Both sides use it: the
-   ground side to compose/decode, the spacecraft application to decode/compose.
+   ground side to compose/decode, the simulated OBSW to decode/compose.
 4. **Single writer for all simulation state** (§4). Every touch of scheduler,
-   target, application state happens on one dedicated thread (`sim-master`),
+   target, OBSW state happens on one dedicated thread (`sim-master`),
    marshalled through `SimulationService`. No simulation class is
    thread-safe, on purpose — they don't need to be.
 
@@ -123,7 +123,7 @@ Everything here is an immutable Java `record` (except the stateless
 `Crc16Ccitt` and the exception) with symmetric `encode()`/`decode()` methods
 implementing the byte layouts of ICD §2–§7. Decoders validate structure, not
 policy: PUS-version and service checks are deliberately *not* here but in the
-spacecraft application (ICD §10.2), so malformed and policy-violating packets
+simulated OBSW (ICD §10.2), so malformed and policy-violating packets
 can be told apart.
 
 ```mermaid
@@ -262,6 +262,15 @@ classDiagram
 
 #### 3.2.3 `obsw` — the simulated spacecraft
 
+The naming model for this package: **the target is the on-board *computer*,
+`SimulatedObsw` is the on-board *software* it runs.** `ObswTarget` does
+transport and time mechanics only (queues, local time, grants) and contains
+no PUS logic; `SimulatedObsw` is pure behavior (TC in → TM out) and touches
+no transport or clocks. The split exists because `SimulatedObsw` is a
+Java-hosted stand-in: from M3 on, an external target carries the real OBSW
+binary and no `SimulatedObsw` is involved — the seam is exactly what the
+real flight software will replace.
+
 ```mermaid
 classDiagram
   class SpaceLink {
@@ -275,7 +284,7 @@ classDiagram
   class ObswTarget {
     <<interface>>
   }
-  class SpacecraftApplication {
+  class SimulatedObsw {
     <<interface>>
     handleTc(tcPacket, nowNanos)
   }
@@ -284,7 +293,7 @@ classDiagram
     localNanos : long
     grant(budget) Consumed
   }
-  class PusSpacecraftApplication {
+  class PusSimulatedObsw {
     tmSequenceCount
     typeCounters
     rejections()
@@ -292,22 +301,22 @@ classDiagram
   EmulatorControl <|-- ObswTarget
   SpaceLink <|-- ObswTarget
   ObswTarget <|.. LoopbackTarget
-  SpacecraftApplication <|.. PusSpacecraftApplication
-  LoopbackTarget --> SpacecraftApplication : due TCs at due time
+  SimulatedObsw <|.. PusSimulatedObsw
+  LoopbackTarget --> SimulatedObsw : due TCs at due time
 ```
 
 | Class | Responsibility | Notes |
 |---|---|---|
 | `ObswTarget` | = `EmulatorControl` + `SpaceLink`. The full plug-in contract for a spacecraft-side execution environment | ADRs call this an "execution back-end" — same concept, wording frozen by ADR immutability |
-| `LoopbackTarget` | In-process reference target (ADR-0006 C5): queues incoming TCs with a fixed processing delay, maintains **slave-local time** that only advances inside `grant()`, hands due TCs to the application, emits resulting TM | Exercises the real grant/consume protocol from the first increment [SIM-REQ-LINK-001] — an event due exactly at the budget boundary takes precedence over budget exhaustion. TM emitted before a consumer registers is buffered, then flushed on `onTm` |
-| `SpacecraftApplication` | The OBSW seam *inside* a Java-hosted target: one TC in (at an explicit simulated time), zero or more TM out | Pure with respect to time — "now" is a parameter, never pulled from a clock. This is what M3+ replaces with real OBSW behind a process boundary |
-| `PusSpacecraftApplication` | The PUS-C protocol brain [SIM-REQ-PUS-008, -010]: acceptance checks in ICD §10.2 order (structure/CRC → PUS version → service/subtype), then service dispatch. M1 service set: TC(17,1) → one TM(17,2) | Owns the spacecraft-side counters [SIM-REQ-PUS-009]: TM sequence count per APID (wrap 16383), message type counter per (service, subtype) (wrap 65535). Rejected TCs are discarded without TM in M1 but recorded on an observable `rejections()` list + log [SIM-REQ-PUS-005, -006]; ST[1] failure reports take over in M1a |
+| `LoopbackTarget` | In-process reference target (ADR-0006 C5): queues incoming TCs with a fixed processing delay, maintains **slave-local time** that only advances inside `grant()`, hands due TCs to the simulated OBSW, emits resulting TM | Exercises the real grant/consume protocol from the first increment [SIM-REQ-LINK-001] — an event due exactly at the budget boundary takes precedence over budget exhaustion. TM emitted before a consumer registers is buffered, then flushed on `onTm` |
+| `SimulatedObsw` | The OBSW seam *inside* a Java-hosted target: one TC in (at an explicit simulated time), zero or more TM out | Pure with respect to time — "now" is a parameter, never pulled from a clock. This is what M3+ replaces with real OBSW behind a process boundary |
+| `PusSimulatedObsw` | The PUS-C protocol brain [SIM-REQ-PUS-008, -010]: acceptance checks in ICD §10.2 order (structure/CRC → PUS version → service/subtype), then service dispatch. M1 service set: TC(17,1) → one TM(17,2) | Owns the spacecraft-side counters [SIM-REQ-PUS-009]: TM sequence count per APID (wrap 16383), message type counter per (service, subtype) (wrap 65535). Rejected TCs are discarded without TM in M1 but recorded on an observable `rejections()` list + log [SIM-REQ-PUS-005, -006]; ST[1] failure reports take over in M1a |
 
 #### 3.2.4 `web` — REST/WebSocket API and the thread bridge
 
 | Class | Responsibility | Notes |
 |---|---|---|
-| `SimulationService` | **The bridge between the multi-threaded web world and the single-threaded simulation** (§4). Marshals every operation onto the `sim-master` thread; encodes structured TC submissions (or passes raw hex verbatim so negative vectors reach the spacecraft side); decodes emitted TM and pushes JSON to the broadcaster [SIM-REQ-UI-003] | Also owns the **ground-side** TC sequence counter (ICD §2: TC counted by ground, wrap 16383) — deliberately separate from the spacecraft-side counters in the application. `previewTc` encodes without injecting and without consuming a sequence count [SIM-REQ-UI-004] |
+| `SimulationService` | **The bridge between the multi-threaded web world and the single-threaded simulation** (§4). Marshals every operation onto the `sim-master` thread; encodes structured TC submissions (or passes raw hex verbatim so negative vectors reach the spacecraft side); decodes emitted TM and pushes JSON to the broadcaster [SIM-REQ-UI-003] | Also owns the **ground-side** TC sequence counter (ICD §2: TC counted by ground, wrap 16383) — deliberately separate from the spacecraft-side counters in the simulated OBSW. `previewTc` encodes without injecting and without consuming a sequence count [SIM-REQ-UI-004] |
 | `TcController` | Thin REST façade: `POST /api/tc` (inject, returns injected hex), `POST /api/tc/preview` (encode only) | `IllegalArgumentException` → HTTP 400 with error message |
 | `TmWebSocketHandler` | Session registry + broadcaster for WS `/api/tm`: every emitted TM goes to every connected session as one JSON text frame [SIM-REQ-UI-002] | Dead sessions dropped on send failure |
 | `TmFrame` (+ `TmFrame.Decoded`) | The wire DTO: raw hex + decoded header fields incl. OBT in seconds | `decoded == null` only if an emitted TM fails to decode — that is logged as a defect, never silent |
@@ -324,7 +333,7 @@ classDiagram
 
 | Class | Responsibility |
 |---|---|
-| `SimulatorApplication` | Spring Boot entry point; wires the object graph: `PusSpacecraftApplication` → `LoopbackTarget` (processing delay 0, per the ICD §6 vectors: TM time = TC injection time) → `SimulationScheduler`. Everything else is component-scanned (`web`, `pacing`) |
+| `SimulatorApplication` | Spring Boot entry point; wires the object graph: `PusSimulatedObsw` → `LoopbackTarget` (processing delay 0, per the ICD §6 vectors: TM time = TC injection time) → `SimulationScheduler`. Everything else is component-scanned (`web`, `pacing`) |
 
 Configuration (`application.properties`): `server.port=8090`,
 `satsim.pacing.tick-millis=20`.
@@ -353,7 +362,7 @@ writer**:
 
 | Thread | Created by | Runs | Touches |
 |---|---|---|---|
-| `sim-master` (1) | `SimulationService` | *Everything* simulation: `SimulationScheduler`, clock, `LoopbackTarget`, `PusSpacecraftApplication`, TC encode, TM decode + JSON, WS broadcast calls | The only writer of simulation state. Scheduler/target/application are intentionally **not** thread-safe |
+| `sim-master` (1) | `SimulationService` | *Everything* simulation: `SimulationScheduler`, clock, `LoopbackTarget`, `PusSimulatedObsw`, TC encode, TM decode + JSON, WS broadcast calls | The only writer of simulation state. Scheduler/target/OBSW are intentionally **not** thread-safe |
 | `sim-pacer` (1) | `InteractivePacer` | Wall-clock ticks; each tick only *submits* `advanceBy` to `sim-master` and returns | No simulation state at all |
 | HTTP/WS workers (pool) | Tomcat | REST controllers, WS lifecycle | Submit work to `sim-master` via `SimulationService` and block up to 5 s for the result (`sendTc`/`previewTc`); never touch simulation state directly |
 
@@ -392,7 +401,7 @@ sequenceDiagram
   participant M as sim-master thread
   participant SCH as SimulationScheduler
   participant T as LoopbackTarget
-  participant A as PusSpacecraftApplication
+  participant A as PusSimulatedObsw
   participant W as TmWebSocketHandler
 
   B->>C: POST /api/tc {service:17, subtype:1}
@@ -429,7 +438,7 @@ injection-time CUC — which is what the ICD §6 reference vectors pin down.
 
 ### 5.3 TC rejection
 
-Same path until `handleTc`. The application walks the ICD §10.2 acceptance
+Same path until `handleTc`. The simulated OBSW walks the ICD §10.2 acceptance
 order — structural decode/CRC (`PacketDecodeException` → `NOT_A_PACKET`),
 PUS version ≠ 2 (`ILLEGAL_PUS_VERSION`), unimplemented service/subtype
 (`ILLEGAL_SERVICE_OR_SUBTYPE`) — and on the first failure records a
@@ -440,7 +449,7 @@ validation so the negative ICD vectors exercise exactly this path. From M1a
 
 ### 5.4 Deterministic (test) operation
 
-Validation tests build `PusSpacecraftApplication` + `LoopbackTarget` +
+Validation tests build `PusSimulatedObsw` + `LoopbackTarget` +
 `SimulationScheduler` directly — no Spring, no pacer — and call
 `advanceBy`/`advanceTo` explicitly. Identical TC sequences at identical
 simulated times yield byte-identical TM streams (SIM-TC-011,
@@ -452,7 +461,7 @@ strictly outside the simulation core.
 | Component | Implements |
 |---|---|
 | `pus-core` codecs | SIM-REQ-PUS-001..005, SIM-REQ-PUS-007 (reference vectors), SIM-REQ-TIME-002 |
-| `PusSpacecraftApplication` | SIM-REQ-PUS-005, -006, -008..010 |
+| `PusSimulatedObsw` | SIM-REQ-PUS-005, -006, -008..010 |
 | `LoopbackTarget` | SIM-REQ-LINK-001, SIM-REQ-TIME-004 |
 | `SimulationScheduler` (+ clock) | SIM-REQ-TIME-003..005 |
 | `InteractivePacer` | SIM-REQ-TIME-001 (containment of wall clock) |
@@ -466,8 +475,8 @@ strictly outside the simulation core.
 
 | Milestone | Change | Where it lands |
 |---|---|---|
-| M1a (SCR-002) | ST[1] verification reports | `PusSpacecraftApplication`: rejection paths gain TM(1,2)/(1,8) emission; accepted TC(17,1) gains TM(1,1)/(1,7) per ack flags. Frontend default ack becomes 0b1001 |
-| M1b (SCR-001) | ST[3] housekeeping, periodic TM(3,25) | First *time-triggered* (not TC-triggered) TM. `SpacecraftApplication`'s TC-only contract will need a deliberate extension (e.g. a time-advance hook invoked from the target's grant path) — design decision to take at M1b start |
+| M1a (SCR-002) | ST[1] verification reports | `PusSimulatedObsw`: rejection paths gain TM(1,2)/(1,8) emission; accepted TC(17,1) gains TM(1,1)/(1,7) per ack flags. Frontend default ack becomes 0b1001 |
+| M1b (SCR-001) | ST[3] housekeeping, periodic TM(3,25) | First *time-triggered* (not TC-triggered) TM. `SimulatedObsw`'s TC-only contract will need a deliberate extension (e.g. a time-advance hook invoked from the target's grant path) — design decision to take at M1b start |
 | M2 | TCP length-framed space-packet link (ICD §8) | New `SpaceLink` implementation on the ground side; Yamcs-ready per ADR-0005 |
 | M3 | Native OBSW process target | New `ObswTarget` implementation: process lifecycle + IPC adapter speaking `EmulatorControl` grants and `SpaceLink` packets across the process boundary (ADR-0001) |
 | M5+ | Emulator targets (TSIM/TEMU/QEMU) | Same seam; grants map to instruction budgets, links map to device models |
