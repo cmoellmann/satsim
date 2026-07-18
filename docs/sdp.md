@@ -53,6 +53,7 @@ ADR-0002), CCSDS 133.0-B, CCSDS 301.0-B.
 | ACT-002 | Contact Beyond Gravity/Terma regarding cOBC simulator (TEMU) licensing once a cOBC-based target becomes concrete. | Open | before M5 planning |
 | ACT-003 | Decide ST[1] subservice subset and update ICD (OP-1). | Closed 2026-07-18 — resolved by SCR-002 (subset: acceptance+completion; ICD update in the SCR-002 spec PR) | M1a (was M2) |
 | ACT-004 | Extend TraceabilityCheck so a milestone gate fails when an in-scope R-verified requirement has no recorded review verdict in the milestone report (`docs/test-reports/M<n>-report.md`). Draft SRS/SVS entries per CLAUDE.md rule 3. Proposal approved 2026-07-18 (M0 gate review). | Closed 2026-07-18 — REQ-NO-REVIEW (gate-failing) / REQ-REVIEW-FAIL (error) findings; verdicts read cumulatively from all in-scope `M*-report.md`; SIM-REQ-QA-003 + SIM-TC-026 | M1 |
+| ACT-005 | Create the SDD (`docs/sdd.md`), overdue from the §7 documentation plan ("to be created during M0/M1"): as-built architecture to class level — responsibilities, relationships, interactions, threading. | Closed 2026-07-18 — SATSIM-SDD Issue 1 (draft) created at the M1 baseline | post-M1 (was M0/M1) |
 
 ### 2.3 Change control
 
@@ -143,7 +144,7 @@ AI (Claude / Claude Code) is used as a development tool. Controls:
 | SVS | docs/svs.md | draft |
 | ICD | docs/icd.md | draft, Issue 1 |
 | ADR log + ADRs | docs/adr/ | ADR-0001…0006 accepted |
-| SDD | docs/sdd.md | to be created during M0/M1 |
+| SDD | docs/sdd.md | created, Issue 1 (draft), ACT-005 |
 | SUM (user manual) | docs/sum.md | deferred to M2 |
 | SRF (software reuse file: dependencies, licenses) | docs/reuse-file.md | created |
 | Test reports | docs/test-reports/ | generated per baseline |

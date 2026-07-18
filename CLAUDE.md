@@ -19,6 +19,9 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
 - `docs/srs.md` — numbered requirements (strict table format, parsed by CI).
 - `docs/svs.md` — validation test case definitions (spec-first).
 - `docs/sdp.md` — process, milestones M0–M5 with exit criteria, action register.
+- `docs/sdd.md` — as-built architecture to class level: who does what, threads,
+  key flows. Descriptive, not normative; update it in the same PR as
+  architecture-shaping changes.
 - `docs/adr/` — decision log (`DECISION-LOG.md`, ADR-0001…0006 summaries) plus
   full ADR files where warranted (currently only ADR-0006). **Immutable once
   accepted.**
