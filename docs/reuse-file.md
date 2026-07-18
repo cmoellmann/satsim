@@ -28,6 +28,9 @@
 | spotbugs-maven-plugin | 4.8.6.6 | build | Apache-2.0 | None (build plugin) | 2026-07-18, C. Möllmann (merge of PR #11) |
 | SpotBugs (tool, resolved by plugin) | 4.8.6 | build | LGPL-2.1-only | None — executes at build time only; not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #11) |
 | jacoco-maven-plugin (JaCoCo) | 0.8.12 | build | EPL-2.0 | None — build-time coverage instrumentation; agent not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #12) |
+| Spring Boot (spring-boot-starter-web, spring-boot-starter-websocket) | 3.5.3 | runtime (`simulator` only) | Apache-2.0 | Notice retention on distribution. Notable transitives: Spring Framework, Tomcat embed, Jackson, Micrometer (all Apache-2.0); SLF4J (MIT); Logback (dual EPL-1.0 / LGPL-2.1 — **used under EPL-1.0**, unmodified, no copyleft impact on SatSim code) | 2026-07-18, C. Möllmann (rule-8 approval in session; PR merge pending) |
+| spring-boot-starter-test | 3.5.3 | test | Apache-2.0 | None (test scope, not distributed). Transitives incl. Mockito (MIT), AssertJ/Awaitility (Apache-2.0), JSONassert (Apache-2.0) | 2026-07-18, C. Möllmann (rule-8 approval in session; PR merge pending) |
+| spring-boot-maven-plugin | 3.5.3 | build | Apache-2.0 | None (build plugin; enables `spring-boot:run` / repackaging). Same project, version and license as the approved starters — flagged explicitly in the introducing PR for confirmation | 2026-07-18, C. Möllmann (rule-8 approval in session; PR merge pending) |
 
 Default Maven core plugins (compiler, resources, jar, install, deploy) are
 Apache-2.0 and covered by the Apache Maven entry; versions are inherited from
@@ -37,7 +40,7 @@ the Maven distribution unless pinned in `pom.xml`.
 
 | Component | Anticipated scope | License (SPDX) | Notes | Milestone |
 |---|---|---|---|---|
-| Spring Boot (web, websocket) | runtime (`simulator` only) | Apache-2.0 | Permissive; no copyleft obligations beyond notice retention | M0/M1 |
+| — (none currently planned) | | | Spring Boot moved to §1 upon approval 2026-07-18 | |
 
 ## 3. Open licensing items
 
@@ -52,3 +55,4 @@ the Maven distribution unless pinned in `pom.xml`.
 | 1 (draft) | 2026-07-12 | Initial register of bootstrap dependencies; planned M0/M1 entries. |
 | 1 (draft) | 2026-07-12 | CI toolchain added (GitHub Actions checkout/setup-java, Temurin 21); maven-compiler-plugin 3.13.0 pinned (build fix). |
 | 1 (draft) | 2026-07-12 | Maven Wrapper 3.3.4 added; Maven pinned to 3.9.11 project-locally. |
+| 1 (draft) | 2026-07-18 | Spring Boot 3.5.3 (starter-web, starter-websocket runtime; starter-test test; maven plugin build) moved from §2 to §1 per rule-8 approval; Logback license election EPL-1.0 recorded. |
