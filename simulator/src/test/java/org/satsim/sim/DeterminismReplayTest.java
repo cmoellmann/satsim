@@ -9,7 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
 import org.satsim.sim.obsw.LoopbackTarget;
-import org.satsim.sim.obsw.PusSpacecraftApplication;
+import org.satsim.sim.obsw.PusSimulatedObsw;
 import org.satsim.sim.time.SimulationScheduler;
 import org.satsim.testsupport.Requirement;
 import org.satsim.testsupport.TestCase;
@@ -48,8 +48,8 @@ class DeterminismReplayTest {
 
   /** Runs the fixed script on a fresh chain; returns the concatenated TM stream. */
   private static byte[] runScriptedScenario() {
-    PusSpacecraftApplication application = new PusSpacecraftApplication();
-    SimulationScheduler scheduler = new SimulationScheduler(new LoopbackTarget(0, application));
+    PusSimulatedObsw obsw = new PusSimulatedObsw();
+    SimulationScheduler scheduler = new SimulationScheduler(new LoopbackTarget(0, obsw));
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
     scheduler.onTm(tm -> stream.writeBytes(tm));
     scheduler.start();

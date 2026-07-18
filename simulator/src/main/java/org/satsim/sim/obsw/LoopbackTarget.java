@@ -13,9 +13,9 @@ import org.satsim.sim.time.StopReason;
  * [SIM-REQ-LINK-001, SIM-REQ-TIME-004].
  *
  * <p>Each received TC is "processed" for a fixed simulated delay and then
- * handed to the {@link SpacecraftApplication} at its due time; the resulting
+ * handed to the {@link SimulatedObsw} at its due time; the resulting
  * TM packets are emitted at that same simulated instant (the M0 placeholder
- * echo became an application implementation in M1). TM due exactly at the
+ * echo became a real {@code SimulatedObsw} in M1). TM due exactly at the
  * budget boundary is emitted (event takes precedence over budget exhaustion).
  *
  * <p>Slave-local time only advances inside {@link #grant(long)}; TCs sent
@@ -29,7 +29,7 @@ public final class LoopbackTarget implements ObswTarget {
   private record PendingTc(long dueNanos, byte[] packet) {}
 
   private final long tcProcessingNanos;
-  private final SpacecraftApplication application;
+  private final SimulatedObsw obsw;
   /** Constant processing delay keeps due times monotonic, so FIFO order holds. */
   private final Deque<PendingTc> pendingTcs = new ArrayDeque<>();
   private final Deque<byte[]> tmBuffer = new ArrayDeque<>();
@@ -40,19 +40,19 @@ public final class LoopbackTarget implements ObswTarget {
 
   /**
    * @param tcProcessingNanos simulated delay between TC arrival and its
-   *     processing by the application, >= 0 (the ICD §6 vectors fix TM time =
-   *     TC injection time, i.e. delay 0, for the M1 chain)
-   * @param application the spacecraft application processing due TCs
+   *     processing by the on-board software, >= 0 (the ICD §6 vectors fix
+   *     TM time = TC injection time, i.e. delay 0, for the M1 chain)
+   * @param obsw the simulated on-board software processing due TCs
    */
-  public LoopbackTarget(long tcProcessingNanos, SpacecraftApplication application) {
+  public LoopbackTarget(long tcProcessingNanos, SimulatedObsw obsw) {
     if (tcProcessingNanos < 0) {
       throw new IllegalArgumentException("tcProcessingNanos must be >= 0: " + tcProcessingNanos);
     }
-    if (application == null) {
-      throw new NullPointerException("application must be non-null");
+    if (obsw == null) {
+      throw new NullPointerException("obsw must be non-null");
     }
     this.tcProcessingNanos = tcProcessingNanos;
-    this.application = application;
+    this.obsw = obsw;
   }
 
   @Override
@@ -79,7 +79,7 @@ public final class LoopbackTarget implements ObswTarget {
       long consumed = next.dueNanos() - localNanos;
       localNanos = next.dueNanos();
       pendingTcs.remove();
-      for (byte[] tm : application.handleTc(next.packet(), localNanos)) {
+      for (byte[] tm : obsw.handleTc(next.packet(), localNanos)) {
         emitTm(tm);
       }
       return new Consumed(consumed, StopReason.EVENT_PENDING);
