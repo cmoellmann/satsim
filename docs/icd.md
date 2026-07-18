@@ -1,10 +1,11 @@
 # SatSim Space–Ground Interface Control Document (ICD)
 
-- Configuration item: SATSIM-ICD, Issue 3 (draft)
+- Configuration item: SATSIM-ICD, Issue 4 (draft)
 - Applicable: ECSS-E-ST-70-41C (PUS-C), CCSDS 133.0-B (Space Packet Protocol), CCSDS 301.0-B (Time Codes)
-- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset)
+- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset), SCR-003 (HMI/web API)
 - Issue 2 (draft) changes vs Issue 1: added §9 (ST[3] housekeeping subset), reference vectors §6.4/§6.5, OP-3; open points renumbered §9→§10. Per SCR-001.
 - Issue 3 (draft) changes vs Issue 2: added §10 (ST[1] request verification subset), reference vectors §6.6; V-NEG-02 clarified with explicit bytes (CRC recomputed — as previously worded the packet failed the CRC check before the version check); frontend default ack flags §3 updated; OP-1 closed, OP-3 re-targeted to M1b; open points renumbered §10→§11. Per SCR-002.
+- Issue 4 (draft) changes vs Issue 3: §8 web API restructured and extended — WebSocket frame-type discriminator `kind` (breaking change vs. the Issue 3 TM-only frame), time frames, rejection frames, extended `POST /api/tc` response. Space-link packet definitions (§2–§7) and all reference vectors unchanged. Per SCR-003.
 
 > **RULE (binding, see CLAUDE.md):** The reference vectors in §6 are the authoritative
 > byte-level contract. Implementation and tests conform to this document; this
@@ -205,8 +206,49 @@ ILLEGAL_PUS_VERSION (27 octets):
 
 ## 8. Transport Mapping
 
-- PoC internal: REST `POST /api/tc` (hex or structured JSON) and WebSocket `/api/tm` (JSON with raw hex + decoded fields).
-- External MCS/emulator link (from M2): TCP, one space packet per length-delimited frame — 4-octet big-endian length prefix followed by the packet octets. Host/port configurable.
+### 8.1 PoC web API — REST TC submission
+
+`POST /api/tc` accepts one JSON body of either form:
+
+- **Raw injection:** `{"hex": "<complete space packet, hex>"}` — injected
+  verbatim, deliberately without ground-side validation (negative vectors
+  exercise the spacecraft-side rejection path).
+- **Structured compose:** `{"service", "subtype", "ackFlags"?, "appDataHex"?}`
+  — encoded per §2/§3 with APID 100, PUS version 2, source ID 0, and the next
+  ground TC packet sequence count (counted per APID, wraps at 16383).
+
+Response (HTTP 200), per SCR-003:
+
+| Field | Content |
+|---|---|
+| `hex` | injected packet octets (hex) |
+| `timeCoarse`, `timeFine`, `timeSeconds` | injection OBT (CUC fields per §5; `timeSeconds` = coarse + fine/65536) |
+| `sequenceCount` | ground sequence count consumed by a structured compose; for raw injections taken from the decoded packet, absent if undecodable |
+| `decoded` | decoded TC fields per §2/§3 (`apid`, `sequenceCount`, `pusVersion`, `ackFlags`, `service`, `subtype`, `sourceId`, `appDataHex`), or `null` with `decodeError` naming the first failed check in §6.3 order |
+
+Invalid submissions (malformed hex, missing fields, out-of-range values) →
+HTTP 400 with `{"error"}`. `POST /api/tc/preview` (structured body only)
+returns `{"hex"}` without injecting and without consuming a sequence count.
+
+### 8.2 PoC web API — WebSocket TM/event stream
+
+WebSocket `/api/tm`, JSON text frames discriminated by `kind` (Issue 4;
+supersedes the Issue 3 TM-only frame format):
+
+| `kind` | Fields | Semantics |
+|---|---|---|
+| `tm` | `hex`, `decoded` (`apid`, `sequenceCount`, `service`, `subtype`, `messageTypeCounter`, `destinationId`, `timeCoarse`, `timeFine`, `timeSeconds`) | one frame per emitted TM space packet, broadcast to all sessions; `decoded` is `null` only for the defect case of an undecodable emitted TM |
+| `time` | `timeCoarse`, `timeFine`, `timeSeconds` | current OBT. Published on session connect and thereafter whenever simulated time has advanced at least the publication quantum — 100 ms *simulated* — since the last time frame (cadence defined in simulated time; no wall-clock involvement) |
+| `rejection` | `reason`, `hex`, `timeCoarse`, `timeFine`, `timeSeconds` | simulator **diagnostic channel** (not spacecraft telemetry) for spacecraft-side TC rejections. `reason` ∈ `NOT_A_PACKET` (failed a §6.3 structural/CRC check — silently discarded on the space link, no §10.4 code), `ILLEGAL_PUS_VERSION` (§10.4 code 0x0001), `ILLEGAL_SERVICE_OR_SUBTYPE` (§10.4 code 0x0002) |
+
+The `tm` stream remains the byte-authoritative record: determinism
+comparisons (SIM-REQ-TIME-005) operate on TM packets only; `time` and
+`rejection` frames are web-API artifacts.
+
+### 8.3 External MCS/emulator link (from M2)
+
+TCP, one space packet per length-delimited frame — 4-octet big-endian length
+prefix followed by the packet octets. Host/port configurable.
 
 ## 9. ST[3] Housekeeping (tailored subset, SCR-001)
 
