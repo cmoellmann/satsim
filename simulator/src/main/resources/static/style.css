@@ -153,6 +153,17 @@ td.hex-cell { font-family: ui-monospace, monospace; word-break: break-all; curso
 td.hex-cell.copied { background: #1c2a1e; }
 tbody tr:not(.detail-row) { cursor: pointer; }
 tbody tr:not(.detail-row):hover td { background: #1b222c; }
+th.chev-col { width: 1.2rem; }
+td.chev { color: var(--muted); font-size: 0.8rem; padding-right: 0; }
+tbody tr:not(.detail-row):hover td.chev { color: var(--accent); }
+tr.expanded td.chev { color: var(--accent); }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 
 .badge {
   display: inline-block;
