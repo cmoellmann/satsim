@@ -52,6 +52,7 @@ ADR-0002), CCSDS 133.0-B, CCSDS 301.0-B.
 | ACT-001 | Verify tailoring matrix and terminology against exact ECSS-E-ST-40C / Q-ST-80C clause references; add citations. | Open | before M2 baseline |
 | ACT-002 | Contact Beyond Gravity/Terma regarding cOBC simulator (TEMU) licensing once a cOBC-based target becomes concrete. | Open | before M5 planning |
 | ACT-003 | Decide ST[1] subservice subset and update ICD (OP-1). | Open | M2 |
+| ACT-004 | Extend TraceabilityCheck so a milestone gate fails when an in-scope R-verified requirement has no recorded review verdict in the milestone report (`docs/test-reports/M<n>-report.md`). Draft SRS/SVS entries per CLAUDE.md rule 3. Proposal approved 2026-07-18 (M0 gate review). | Open | M1 |
 
 ## 3. Organization, Tools, Conventions
 
