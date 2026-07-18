@@ -46,6 +46,14 @@ SatSim is two experiments in one.
   first; everything is recorded with version, scope, and SPDX license in the
   [Software Reuse File](docs/reuse-file.md). Copyleft components are confined
   to build scope.
+- **Scope changes go through change control, not chat.** When the plan
+  changed (adding an ST[3] housekeeping subset so first-time users see live
+  telemetry immediately), the AI didn't just edit the plan: it introduced a
+  Software Change Request instrument, wrote
+  [SCR-001](docs/scr/SCR-001-st3-housekeeping.md) with a per-document impact
+  analysis, and the human dispositioned it by PR review. The impact analysis
+  predicted a real defect (the traceability checker couldn't parse the
+  inserted milestone ID "M1b") before CI ever saw it.
 - **Tiered AI staffing — and the org chart is a reviewed artifact.** Routine
   implementation and report assembly are delegated to cheaper models under
   [committed agent definitions](.claude/agents/README.md) with bounded
@@ -62,6 +70,7 @@ SatSim is two experiments in one.
 | Software Validation Specification (SVS) | [docs/svs.md](docs/svs.md) | Spec-first validation test case definitions with human-approved expected results |
 | Interface Control Document (ICD) | [docs/icd.md](docs/icd.md) | Byte-level TM/TC contract with authoritative reference vectors (§6) and CRC anchors (§7) |
 | Architecture decisions (ADR) | [docs/adr/DECISION-LOG.md](docs/adr/DECISION-LOG.md) | Immutable decision log; [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) (simulation time ownership) as the full-form sample |
+| Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
 | M0 milestone test report | [docs/test-reports/M0-report.md](docs/test-reports/M0-report.md) | Gate record: test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
@@ -88,9 +97,19 @@ In place after M0: CI on every PR, CRC-16 verified against ICD anchors, CCSDS
 primary header codec, a time-mastered loopback OBSW target, the traceability
 gate, and a build-enforced wall-clock ban (Checkstyle + SpotBugs).
 
+**First change request dispositioned** — [SCR-001](docs/scr/SCR-001-st3-housekeeping.md)
+(2026-07-18) added an ST[3] housekeeping subset as new increment **M1b**:
+TC(3,1) create structure, TC(3,5)/(3,7) enable/disable, periodic TM(3,25),
+and a default report structure enabled at startup — so the first thing a new
+user sees is telemetry flowing. Approved and specified end-to-end:
+[ICD](docs/icd.md) Issue 2 with human-approved ST[3] reference vectors,
+four new [SRS](docs/srs.md) requirements, four new [SVS](docs/svs.md) cases.
+Implementation follows in the M1b session.
+
 **Next: M1** — the full TC(17,1) → TM(17,2) chain through the web frontend,
 PUS-C TC/TM codecs validated against the ICD §6 reference vectors, REST/WS
-API, and a determinism replay test (see [SDP §4](docs/sdp.md)).
+API, and a determinism replay test (see [SDP §4](docs/sdp.md)); then **M1b**
+implements the SCR-001 housekeeping scope against its approved spec.
 
 ## Getting started
 
