@@ -18,4 +18,4 @@ jobs:
       - name: Build and test
         run: ./mvnw -B verify
       - name: Traceability consistency gate (SIM-REQ-QA-001/002)
-        run: java -cp sim-test-support/target/classes org.satsim.testsupport.trace.TraceabilityCheck --root . --milestone M0 --gate
+        run: java -cp sim-test-support/target/classes org.satsim.testsupport.trace.TraceabilityCheck --root . --milestone M1 --gate
