@@ -1,75 +1,117 @@
 # SatSim
 
-Satellite simulator (Java 21, Maven) for developing and automatically testing
-satellite on-board software, with an ECSS-E-ST-70-41C (PUS-C) TM/TC interface
-and a thin web frontend. Developed under a tailored ECSS-E-ST-40C /
-ECSS-Q-ST-80C process (Category D ground software).
+[![CI](https://github.com/cmoellmann/satsim/actions/workflows/ci.yml/badge.svg)](https://github.com/cmoellmann/satsim/actions/workflows/ci.yml)
 
-## Why this project exists
+A satellite simulator with a byte-exact ECSS PUS-C TM/TC interface and a live
+web console, for developing and automatically testing satellite on-board
+software (OBSW). Built AI-assisted under a tailored ECSS-E-ST-40C/Q-ST-80C
+process — with documented, machine-enforced human controls.
 
-SatSim is two experiments in one.
+![SatSim console — live OBT clock, TC(17,1) ping answered by TM(1,1) acceptance, TM(17,2) report, and TM(1,7) completion](docs/assets/console.png)
 
-**The engineering experiment:** a satellite simulator (Java 21, PUS-C/ECSS-E-ST-70-41C TM/TC interface) for developing and automatically testing satellite on-board software — built with the same discipline I spent a decade applying to real onboard software: a tailored ECSS-E-ST-40C/Q-ST-80C process, byte-level ICD with authoritative reference vectors, spec-first validation, full requirement-to-test traceability, and deterministic replay (identical inputs ⇒ byte-identical TM streams).
+*The console after one ping with default acknowledgement flags: acceptance
+report, service report, completion report — each row expandable to a
+field-level breakdown down to the CRC.*
 
-**The methodology experiment:** the project is deliberately AI-assisted (Claude / Claude Code) — under explicit, documented controls. AI proposes; the human decides. Architecture trade-offs are AI-analyzed and human-decided (see [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md)). Reference vectors and expected test results are human-approved and **immutable to the AI**: if implementation and spec disagree, the AI must stop and report a finding — never adjust the spec to make a test pass. All AI-generated content enters the baseline only via reviewed PR. Several of the process safeguards — including the immutability rule itself — originated as AI proposals that were evaluated and approved by the project lead. That loop is the point.
+## What SatSim is
 
-**The question behind it:** can one engineer, with 15 years of satellite onboard-software and safety-critical systems experience, use AI-assisted development to produce flight-software-grade engineering at a fraction of the traditional effort — *without* sacrificing the integrity that makes it flight-grade? This repository is the running answer.
+SatSim is two experiments in one repository. The **engineering experiment**:
+a simulator that speaks strict PUS-C (ECSS-E-ST-70-41C) over CCSDS space
+packets, built with the same discipline applied to real flight software — a
+tailored ECSS process, a byte-level ICD with authoritative reference vectors,
+spec-first validation, full requirement-to-test traceability, and
+deterministic replay. The **methodology experiment**: the project is
+deliberately AI-assisted (Claude / Claude Code) under explicit controls — AI
+proposes, the human decides; reference vectors and expected test results are
+human-approved and *immutable to the AI*; everything enters the baseline via
+reviewed PR. Several of the safeguards, including the immutability rule
+itself, originated as AI proposals that the human evaluated and approved.
+The question behind both: can one engineer with 15 years of onboard-software
+experience use AI-assisted development to produce flight-software-grade
+engineering at a fraction of the traditional effort — *without* sacrificing
+the integrity that makes it flight-grade? This repository is the running
+answer.
+
+What the PoC covers today:
+
+- **PUS-C over CCSDS space packets**, strictly tailored: ST[17] connection
+  test and the ST[1] request verification subset live; ST[3] housekeeping
+  specified and next (M1b). Single APID, CUC 4+2 on-board time.
+- **Deterministic simulated time** — the scheduler is the sole time master
+  (ADR-0006); wall-clock access in simulation logic is banned *by the build*.
+  Identical scripted runs produce SHA-256-identical TM streams, timestamps
+  included.
+- **Process-isolated OBSW targets** behind two narrow contracts
+  (`SpaceLink`, `EmulatorControl`): the entire validation suite must pass
+  unchanged against any conforming target — a conformance kit for
+  progressively more real spacecraft software.
+- **A thin web console**: running OBT clock, live packet log with rejection
+  rows and field-level detail view, compose form whose hex preview *is* the
+  ICD reference vector.
+- **A live ECSS document set**: requirements and test cases machine-parsed
+  by CI, ICD vectors immutable, milestone gates recorded as auditable
+  reports.
+- **Tiered AI staffing** under committed agent definitions: cheaper models
+  implement well-specified chunks, the senior model reviews, the human
+  merges.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    B["Browser console"] -- "REST /api/tc" --> S["SimulationService"]
+    S -- "WS /api/tm (tm / time / rejection frames)" --> B
+    S --> SCH["SimulationScheduler<br/>(time master)"]
+    SCH -- "grant(budget) / consumed(time, reason)" --> T["LoopbackTarget<br/>(OBSW target)"]
+    T --> O["PusSimulatedObsw<br/>(ST17, ST1)"]
+    O -.-> P["pus-core<br/>(CCSDS/PUS-C codecs, JDK-only)"]
+    S -.-> P
+```
+
+The scheduler *grants* time budgets to the OBSW target and the target reports
+back what it *consumed* (ADR-0006) — simulated time never runs ahead of its
+master, which is what makes byte-identical replay possible.
 
 ## Highlights
 
 - **The ECSS standards are the input, not the afterthought.** The controlled
-  document set — [SDP](docs/sdp.md), [SRS](docs/srs.md), [SVS](docs/svs.md),
-  [ICD](docs/icd.md), [ADR log](docs/adr/DECISION-LOG.md),
-  [Software Reuse File](docs/reuse-file.md), milestone
-  [test reports](docs/test-reports/) — exists for real and is *live*: parsed
-  by CI, gated at milestones, or both. None of it is shelf-ware. The process
-  gives the AI hard rails; the AI makes the process affordable at PoC scale.
-- **Traceability is a CI gate — and it found a real spec gap on its first
-  run.** A JDK-only checker cross-checks SRS/SVS tables against
-  `@TestCase`/`@Requirement` annotations in every PR. Its first dry-run
-  revealed a requirement no validation case covered; the AI reported it as a
-  finding (it is forbidden from editing the spec), the human approved the fix.
-- **The milestone gate is auditable.** The
-  [M0 report](docs/test-reports/M0-report.md) records per-case verdicts,
-  coverage, a full traceability matrix, and — for review-verified
-  requirements — human verdicts with the evidence down to reproducible grep
-  commands. Since M1, the gate *fails* if a review verdict is ever missing
-  (ACT-004): review obligations are machine-checked, same as test coverage.
-- **Design rules are build-enforced.** The simulation-time rule (no wall-clock
-  access — time comes only from `SimulationClock`, [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md))
-  is a Checkstyle forbidden-API gate with exactly one sanctioned, documented
-  suppression. SpotBugs ships with an intentionally empty exclude list — and
-  its very first run caught real defects in our own tooling, which were fixed,
-  not excluded.
-- **The on-board software is a plug, not a partner.** OBSW targets are
-  process-isolated behind two narrow contracts — packet transport
-  (`SpaceLink`) and simulated-time mastering (`EmulatorControl`,
-  [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md)): today an
-  in-process loopback, next a native C/Rust demo process, then real flight
-  binaries under instruction-level emulators (QEMU, TSIM, Terma TEMU/cOBC).
-  Interchangeability is itself a requirement (SIM-REQ-LINK-003): the entire
-  validation suite must pass **unchanged** against any conforming target,
-  turning the byte-exact, deterministic test suite into a conformance kit
-  for progressively more real spacecraft.
-- **Dependency governance, ECSS-style.** No third-party component (including
-  build plugins) enters without the license being presented and approved
-  first; everything is recorded with version, scope, and SPDX license in the
-  [Software Reuse File](docs/reuse-file.md). Copyleft components are confined
-  to build scope.
-- **Scope changes go through change control, not chat.** When the plan
-  changed (adding an ST[3] housekeeping subset so first-time users see live
-  telemetry immediately), the AI didn't just edit the plan: it introduced a
-  Software Change Request instrument, wrote
-  [SCR-001](docs/scr/SCR-001-st3-housekeeping.md) with a per-document impact
-  analysis, and the human dispositioned it by PR review. The impact analysis
-  predicted a real defect (the traceability checker couldn't parse the
-  inserted milestone ID "M1b") before CI ever saw it.
-- **Tiered AI staffing — and the org chart is a reviewed artifact.** Routine
-  implementation and report assembly are delegated to cheaper models under
-  [committed agent definitions](.claude/agents/README.md) with bounded
-  authority (no spec edits, no dependency changes, no commits); the senior
-  model reviews every delegated diff, the human merges. Delegation is
-  announce-first and the policy itself entered the repo via PR.
+  document set below exists for real and is *live*: parsed by CI, gated at
+  milestones, or both. The process gives the AI hard rails; the AI makes the
+  process affordable at PoC scale.
+- **Specs are immutable to the AI.** If implementation and spec disagree, the
+  AI must stop and report a finding — never adjust the spec to make a test
+  pass. This rule has caught real defects: a negative test vector whose stale
+  CRC masked the check it existed to verify, found while generating vectors.
+- **Traceability and review obligations are CI gates.** Requirement → SVS
+  case → annotated test is machine-checked on every PR (its first dry-run
+  found a spec gap); missing human review verdicts fail the build (ACT-004).
+  The gate even failed one of its own PRs — and was right.
+- **Determinism is build-enforced.** The wall-clock ban is a Checkstyle
+  forbidden-API gate with one sanctioned suppression; the replay test proves
+  two identical runs yield SHA-256-identical TM streams.
+- **The on-board software is a plug, not a partner.** Today an in-process
+  loopback, next a native C/Rust demo process, then flight binaries under
+  instruction-level emulators (QEMU, TSIM, Terma TEMU) — same validation
+  suite, unchanged (SIM-REQ-LINK-003).
+- **Change and staffing go through process, not chat.** Scope changes are
+  SCRs with per-document impact analyses, dispositioned by PR review; routine
+  implementation is delegated to cheaper models under committed agent
+  definitions with bounded authority, every delegated diff reviewed before
+  commit.
+
+## Status
+
+| Milestone | Date | Scope | Gate record |
+|---|---|---|---|
+| [`M0`](https://github.com/cmoellmann/satsim/releases/tag/M0) | 2026-07-18 | Walking skeleton: build, CI, interface trio, loopback target, CRC + primary header codecs | [M0 report](docs/test-reports/M0-report.md) |
+| [`M1`](https://github.com/cmoellmann/satsim/releases/tag/M1) | 2026-07-18 | TC(17,1)→TM(17,2) chain: PUS-C codecs, time-mastered scheduler, REST/WS API, web console, determinism replay | [M1 report](docs/test-reports/M1-report.md) |
+| [`M1a`](https://github.com/cmoellmann/satsim/releases/tag/M1a) | 2026-07-18 | HMI package ([SCR-003](docs/scr/SCR-003-hmi-improvements.md)): OBT clock, rejection rows, detail view. ST[1] request verification ([SCR-002](docs/scr/SCR-002-st1-verification.md)): TM(1,1)/(1,2)/(1,7) | [M1a report](docs/test-reports/M1a-report.md) |
+
+Currently: **93/93 tests green**, pus-core line coverage **95.74 %**
+(indicative target 80 %), traceability gate at 0 findings.
+**Next: M1b** — ST[3] housekeeping per
+[SCR-001](docs/scr/SCR-001-st3-housekeeping.md); periodic telemetry flows
+before the user sends anything.
 
 ## Document set
 
@@ -79,99 +121,13 @@ SatSim is two experiments in one.
 | Software Requirements Specification (SRS) | [docs/srs.md](docs/srs.md) | Numbered requirements in a strict table format, machine-parsed by the CI traceability gate |
 | Software Validation Specification (SVS) | [docs/svs.md](docs/svs.md) | Spec-first validation test case definitions with human-approved expected results |
 | Interface Control Document (ICD) | [docs/icd.md](docs/icd.md) | Byte-level TM/TC contract with authoritative reference vectors (§6) and CRC anchors (§7) |
+| Software Design Document (SDD) | [docs/sdd.md](docs/sdd.md) | As-built architecture to class level: modules, threads, key flows |
 | Architecture decisions (ADR) | [docs/adr/DECISION-LOG.md](docs/adr/DECISION-LOG.md) | Immutable decision log; [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) (simulation time ownership) as the full-form sample |
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
 | Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md), [M1a](docs/test-reports/M1a-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
-
-## Status
-
-**Milestone M0 (walking skeleton) closed 2026-07-18** — tag
-[`M0`](https://github.com/cmoellmann/satsim/releases/tag/M0), twelve reviewed PRs over two working days.
-The gate record is a committed, auditable artifact, not a checkbox:
-
-- **30/30 tests green** at the baseline commit, reproduced by a clean
-  `./mvnw clean verify` — see the
-  [M0 milestone test report](docs/test-reports/M0-report.md).
-- **98.55 % line coverage** on the packet library `pus-core`
-  (indicative target: 80 %).
-- **All 8 M0 requirements traced** requirement → SVS case → annotated test
-  method, verified by the CI traceability gate (0 findings).
-- **Human review verdicts** — named, dated, with the exact evidence
-  inspected — recorded in the report for the two requirements no test can
-  prove.
-
-In place after M0: CI on every PR, CRC-16 verified against ICD anchors, CCSDS
-primary header codec, a time-mastered loopback OBSW target, the traceability
-gate, and a build-enforced wall-clock ban (Checkstyle + SpotBugs).
-
-**Two change requests dispositioned** (2026-07-18), both aimed at the
-first-use experience — a fresh simulator should immediately *feel* like a
-spacecraft:
-
-- [SCR-001](docs/scr/SCR-001-st3-housekeeping.md) added an ST[3]
-  housekeeping subset as new increment **M1b**: create/enable/disable report
-  structures, periodic TM(3,25), and a default structure enabled at startup —
-  telemetry flows before the user sends anything.
-- [SCR-002](docs/scr/SCR-002-st1-verification.md) pulled ST[1] request
-  verification forward as new increment **M1a**: every command visibly
-  acknowledged (TM(1,1)/(1,7)), every failure visibly reported
-  (TM(1,2)/(1,8)). Its impact analysis doubled as review: generating the new
-  reference vectors exposed that a negative test vector could never trigger
-  the behavior it verified (stale CRC masked the version check) — found,
-  recorded in the SCR, fixed in the same reviewed PR.
-
-Both are approved and specified end-to-end ([ICD](docs/icd.md) Issue 3 with
-human-approved reference vectors, eight new [SRS](docs/srs.md) requirements,
-nine new/amended [SVS](docs/svs.md) cases); implementation follows in the
-M1a/M1b sessions.
-
-**Milestone M1 (TC(17,1)→TM(17,2) goal increment) closed 2026-07-18** — same
-day as M0, five reviewed PRs. The simulator now *runs*: a Spring Boot backend
-with a thin web console, speaking byte-exact PUS-C. Gate record:
-[M1 milestone test report](docs/test-reports/M1-report.md).
-
-- **87/87 tests green**; pus-core line coverage **95.74 %** (indicative
-  target 80 %).
-- **Byte-exact against the ICD end-to-end**: encoders reproduce reference
-  vectors V-TC-01/02 and V-TM-01/02 to the last CRC byte; the frontend's
-  compose preview of a fresh ping *is* V-TC-01; negative vectors are
-  rejected exactly as specified (bad CRC silently, wrong PUS version
-  observably).
-- **Determinism replay proven** (ADR-0006 C6): two identical scripted runs
-  produce SHA-256-identical TM streams, timestamps included — the payoff of
-  the build-enforced wall-clock ban.
-- **The gate now audits its reviewers** (ACT-004 closed): a missing human
-  review verdict fails CI; a recorded reviewed-FAIL fails any build.
-- **Codec layer implemented by the delegated Sonnet agent** from a fixed API
-  spec, reviewed byte-by-byte in the main session — the tiered-staffing
-  policy exercised on real scope.
-
-**Milestone M1a (HMI package + ST[1] request verification) closed
-2026-07-18** — the two dispositioned change requests aimed at the first-use
-experience, delivered under one gate. Gate record:
-[M1a milestone test report](docs/test-reports/M1a-report.md).
-
-- **The console now feels like a ground segment** (SCR-003): a running OBT
-  clock driven by kind-discriminated WebSocket frames whose 100 ms cadence
-  is defined in *simulated* time — smooth at 1:1 pacing, byte-predictable
-  in CI; TC rejections as first-class log rows; a field-level packet detail
-  view; Type/Subtype dropdowns fed by the tailored service set.
-- **Every command is visibly acknowledged** (SCR-002): TM(1,1) acceptance
-  and TM(1,7) completion reports gated by the TC's acknowledgement flags,
-  TM(1,2) failure reports always — all six new ICD reference vectors
-  reproduced byte-identically on the first test run. The determinism replay
-  stream nearly tripled (42 → 119 octets) and stayed SHA-256-identical.
-- **93/93 tests green**; pus-core line coverage **95.74 %**.
-- **The gate caught its own PR**: the first CI run failed with a
-  traceability finding (two test methods claiming one SVS case) — exactly
-  the class of drift the gate exists to prevent, fixed before merge.
-
-**Next: M1b** (ST[3] housekeeping, SCR-001) — fully specified with
-human-approved vectors; first telemetry flows before the user sends
-anything.
 
 ## Getting started
 
@@ -186,12 +142,62 @@ java -jar simulator/target/simulator-0.1.0-SNAPSHOT.jar
 ```
 
 then open http://localhost:8090 — compose a TC(17,1) ping (the hex preview
-shows the exact ICD vector), send it, and watch the TM(17,2) response arrive
-in the live log. REST/WebSocket API per [ICD §8](docs/icd.md): `POST /api/tc`,
-WS `/api/tm`.
+shows the exact ICD vector), send it, and watch TM(1,1), TM(17,2), TM(1,7)
+arrive in the live log. REST/WebSocket API per [ICD §8](docs/icd.md):
+`POST /api/tc`, WS `/api/tm`.
 
 For a quick tour of the methodology, read
 [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) for a sample of the
 decision process, [SDP §6](docs/sdp.md) for the AI-governance controls, and
 the [M0 report](docs/test-reports/M0-report.md) for what a milestone gate
 produces.
+
+## Current limitations
+
+- **In-process loopback target only.** No real OBSW binary runs yet — the
+  target seam exists precisely for that, but native processes arrive at M3
+  and emulated flight binaries at M5.
+- **Tailored service subset.** ST[17] and the ST[1]
+  acceptance/completion subset are live; ST[3] housekeeping is specified but
+  not implemented (M1b). TM(1,8) completion-failure reports are dormant until
+  a service with semantic execution errors exists (M1b, ICD OP-3).
+- **Single APID (100), single ground source, strict PUS-C only** — by
+  design (ADR-0002/0003), not by accident.
+- **The web console is a PoC HMI, not a mission control system.** It paces
+  simulated time 1:1 against wall clock for interactive use; the scheduler
+  underneath can jump arbitrarily (that's what the tests do), but the UI
+  exposes no fast-forward yet.
+- **No external transport.** The TCP length-framed space-packet link (M2)
+  and Yamcs attachment (M4) are not built yet; today the only way in is
+  REST/WS.
+- **No LICENSE file yet** (SRF-OPEN-1) — the repository is public source,
+  not yet open source; the license decision is tracked and pending.
+- **Coverage target on pus-core only** (SDP §2.1 tailoring); other modules
+  are covered by validation tests without a numeric bar.
+
+## Roadmap
+
+Planned increments per [SDP §4](docs/sdp.md), each behind a milestone gate:
+
+- **M1b** — ST[3] housekeeping subset ([SCR-001](docs/scr/SCR-001-st3-housekeeping.md)):
+  create/enable/disable report structures, periodic TM(3,25), default
+  structure reporting at startup.
+- **M2** — TCP length-framed space-packet link: external client demo over
+  TCP, conformance-tested framing.
+- **M3** — native OBSW demo process (small C or Rust ST[17] responder):
+  the same validation suite green against a second, out-of-process target.
+- **M4** — Yamcs attachment trial: TC/TM round-trip from a real mission
+  control client over the M2 link.
+- **M5** — first emulator adapter (QEMU): validation suite green against an
+  OBSW binary under instruction-level emulation, time-sync conformance
+  proven.
+
+Ideas beyond the current plan — each would enter via SCR, not by quiet scope
+growth: further PUS services (ST[5] events, ST[11] time-tagged commands,
+ST[12] monitoring), fault injection on the space link, commercial emulators
+(TSIM, Terma TEMU/cOBC), multi-APID / multi-spacecraft scenarios.
+
+---
+
+All AI-generated content in this repository — code, documents, this README —
+enters the baseline only via human-reviewed pull request.
