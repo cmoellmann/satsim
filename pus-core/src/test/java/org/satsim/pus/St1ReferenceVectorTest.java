@@ -41,12 +41,19 @@ class St1ReferenceVectorTest {
 
   /**
    * SIM-TC-022: V-TC-06, V-NEG-02 (clarified bytes) and V-TM-05/06/07/08
-   * decode without error to the ICD-specified field values.
+   * encode byte-identically and decode without error to the ICD-specified
+   * field values. One test method for both directions: the gate requires
+   * exactly one implementing test per SVS case (SIM-REQ-QA-001).
    */
   @Test
   @TestCase("SIM-TC-022")
   @Requirement({"SIM-REQ-PUS-007", "SIM-REQ-VER-001"})
-  void decodesReferenceVectorsToIcdSpecifiedFields() throws PacketDecodeException {
+  void encodesAndDecodesReferenceVectorsToIcdSpecifiedFields() throws PacketDecodeException {
+    decodesToIcdSpecifiedFields();
+    encodeReproducesReferenceVectors();
+  }
+
+  private void decodesToIcdSpecifiedFields() throws PacketDecodeException {
     TcPacket tc06 = TcPacket.decode(V_TC_06);
     assertEquals(0b1001, tc06.secondaryHeader().ackFlags());
     assertEquals(17, tc06.secondaryHeader().serviceType());
@@ -94,13 +101,10 @@ class St1ReferenceVectorTest {
   }
 
   /**
-   * SIM-TC-022: rebuilding each vector's packet from its decoded field
-   * values and re-encoding it reproduces the vector byte-for-byte.
+   * Rebuilding each vector's packet from its ICD-specified field values and
+   * re-encoding it reproduces the vector byte-for-byte.
    */
-  @Test
-  @TestCase("SIM-TC-022")
-  @Requirement({"SIM-REQ-PUS-007", "SIM-REQ-VER-001"})
-  void encodeReproducesReferenceVectors() {
+  private void encodeReproducesReferenceVectors() {
     TcPacket tc06 = TcPacket.of(100, 0, new TcSecondaryHeader(2, 0b1001, 17, 1, 0), new byte[0]);
     assertArrayEquals(V_TC_06, tc06.encode());
 
