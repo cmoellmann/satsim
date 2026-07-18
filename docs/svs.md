@@ -15,7 +15,7 @@
 | SIM-TC-004 | SIM-REQ-PUS-007, SIM-REQ-PUS-004, SIM-REQ-TIME-002 | TM encoding against reference vectors | A | Encoder output byte-identical to V-TM-01 and V-TM-02 (incl. CUC time field). |
 | SIM-TC-005 | SIM-REQ-PUS-007 | Decoding of reference vectors | A | V-TC-01/02 and V-TM-01/02 decode without error; all decoded fields equal ICD-specified values. |
 | SIM-TC-006 | SIM-REQ-PUS-005 | CRC failure rejection | A | V-NEG-01 rejected; no TM emitted; rejection observable (log/queue). |
-| SIM-TC-007 | SIM-REQ-PUS-006 | PUS version rejection | A | V-NEG-02 rejected; no TM emitted. |
+| SIM-TC-007 | SIM-REQ-PUS-006 | PUS version rejection | A | V-NEG-02 rejected; no TM(17,2) emitted. (Amended per SCR-002: the former "no TM emitted" criterion is superseded — from M1a, rejection additionally yields exactly one TM(1,2), verified by SIM-TC-024; before M1a no TM of any kind exists.) |
 | SIM-TC-008 | SIM-REQ-PUS-008, SIM-REQ-PUS-010 | ST[17] round-trip via loopback | A | Injecting V-TC-01 yields exactly one TM(17,2), APID 100; byte-identical to V-TM-01 when injected at T=0 with fresh counters. |
 | SIM-TC-009 | SIM-REQ-PUS-009 | Counter behavior | A | Two consecutive pings yield TM seq counts n, n+1 and msg type counters m, m+1; wrap tested at forced counter presets 16383 and 65535. |
 | SIM-TC-010 | SIM-REQ-TIME-004, SIM-REQ-LINK-001 | EmulatorControl grant/consume contract (loopback) | A | grant(b) returns consumed ≤ b with stop reason; early return on pending TM event reports correct consumed time. |
@@ -30,6 +30,10 @@
 | SIM-TC-019 | SIM-REQ-HK-003, SIM-REQ-HK-002 | Default-SID periodic reporting | A | Fresh start, no TC traffic: TM(3,25) for SID 1 emitted at simulated T=1.0 s and T=2.0 s; the first two reports are byte-identical to V-TM-03 and V-TM-04; no report before T=1.0 s. (Scope: M1b) |
 | SIM-TC-020 | SIM-REQ-HK-001, SIM-REQ-HK-004 | HK structure lifecycle (create/enable/disable) | A | V-TC-03 creates SID 2 and no SID 2 report is emitted while disabled; after V-TC-04, SID 2 reports at 5.0 s simulated intervals with parameters {P001, P003}; after V-TC-05, no further SID 2 reports; SID 1 reporting unaffected throughout. (Scope: M1b) |
 | SIM-TC-021 | SIM-REQ-HK-003 | Frontend smoke test: periodic HK visible | M | Checklist: open frontend on a freshly started simulator; without sending any TC, TM(3,25) entries appear about once per second (interactive 1:1 pacing) with decoded SID and parameter values; HK-P003 value changes between reports. Verdict + date + name recorded in milestone report. (Scope: M1b) |
+| SIM-TC-022 | SIM-REQ-PUS-007, SIM-REQ-VER-001 | ST[1] reference vector encode/decode | A | V-TC-06, V-NEG-02 (clarified bytes) and V-TM-05/06/07/08 encode byte-identically and decode without error to the ICD-specified field values. (Scope: M1a — covers the ICD §6.6 vectors and the clarified V-NEG-02 added by SCR-002.) |
+| SIM-TC-023 | SIM-REQ-VER-001, SIM-REQ-VER-002 | Ack-flag-driven verification sequence | A | Fresh start: injecting V-TC-06 (ack=0b1001) at T=0 yields exactly TM(1,1), TM(17,2), TM(1,7) in this order, byte-identical to V-TM-05/06/07; separately, fresh start: injecting V-TC-01 (ack=0b0000) yields exactly one TM(17,2) and no ST[1] report. (Scope: M1a) |
+| SIM-TC-024 | SIM-REQ-VER-003 | Acceptance failure report | A | Fresh start: injecting V-NEG-02 at T=0 yields exactly one TM(1,2), byte-identical to V-TM-08, and no TM(17,2). (Scope: M1a. The TM(1,8) completion-failure path is exercised from M1b, when ST[3] semantic errors map to ST[1] per ICD OP-3.) |
+| SIM-TC-025 | SIM-REQ-VER-004 | Frontend smoke test: verification reports visible | M | Checklist: compose dialog defaults to ack 0b1001; sending a ping shows TM(1,1), TM(17,2), TM(1,7) in the live log with decoded fields. Verdict + date + name recorded in milestone report. (Scope: M1a) |
 
 ## Change log
 
@@ -38,3 +42,4 @@
 | 1 (draft) | 2026-07-12 | Initial cases for M0–M3 scope. |
 | 1 (draft) | 2026-07-12 | SIM-TC-017 added: quantum reconfiguration (M5), closes coverage gap for SIM-REQ-TIME-006 found by traceability check (PR #8). |
 | 1 (draft) | 2026-07-18 | SIM-TC-018…021 added (ST[3] housekeeping subset, scope M1b) per SCR-001. |
+| 1 (draft) | 2026-07-18 | SIM-TC-022…025 added (ST[1] request verification subset, scope M1a); SIM-TC-007 pass criterion amended (TM(1,2) on PUS-version rejection from M1a). Per SCR-002. |

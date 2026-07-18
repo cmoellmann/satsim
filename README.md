@@ -97,19 +97,31 @@ In place after M0: CI on every PR, CRC-16 verified against ICD anchors, CCSDS
 primary header codec, a time-mastered loopback OBSW target, the traceability
 gate, and a build-enforced wall-clock ban (Checkstyle + SpotBugs).
 
-**First change request dispositioned** — [SCR-001](docs/scr/SCR-001-st3-housekeeping.md)
-(2026-07-18) added an ST[3] housekeeping subset as new increment **M1b**:
-TC(3,1) create structure, TC(3,5)/(3,7) enable/disable, periodic TM(3,25),
-and a default report structure enabled at startup — so the first thing a new
-user sees is telemetry flowing. Approved and specified end-to-end:
-[ICD](docs/icd.md) Issue 2 with human-approved ST[3] reference vectors,
-four new [SRS](docs/srs.md) requirements, four new [SVS](docs/svs.md) cases.
-Implementation follows in the M1b session.
+**Two change requests dispositioned** (2026-07-18), both aimed at the
+first-use experience — a fresh simulator should immediately *feel* like a
+spacecraft:
+
+- [SCR-001](docs/scr/SCR-001-st3-housekeeping.md) added an ST[3]
+  housekeeping subset as new increment **M1b**: create/enable/disable report
+  structures, periodic TM(3,25), and a default structure enabled at startup —
+  telemetry flows before the user sends anything.
+- [SCR-002](docs/scr/SCR-002-st1-verification.md) pulled ST[1] request
+  verification forward as new increment **M1a**: every command visibly
+  acknowledged (TM(1,1)/(1,7)), every failure visibly reported
+  (TM(1,2)/(1,8)). Its impact analysis doubled as review: generating the new
+  reference vectors exposed that a negative test vector could never trigger
+  the behavior it verified (stale CRC masked the version check) — found,
+  recorded in the SCR, fixed in the same reviewed PR.
+
+Both are approved and specified end-to-end ([ICD](docs/icd.md) Issue 3 with
+human-approved reference vectors, eight new [SRS](docs/srs.md) requirements,
+nine new/amended [SVS](docs/svs.md) cases); implementation follows in the
+M1a/M1b sessions.
 
 **Next: M1** — the full TC(17,1) → TM(17,2) chain through the web frontend,
 PUS-C TC/TM codecs validated against the ICD §6 reference vectors, REST/WS
-API, and a determinism replay test (see [SDP §4](docs/sdp.md)); then **M1b**
-implements the SCR-001 housekeeping scope against its approved spec.
+API, and a determinism replay test (see [SDP §4](docs/sdp.md)); then **M1a**
+(verification) and **M1b** (housekeeping) implement the approved SCR scopes.
 
 ## Getting started
 
