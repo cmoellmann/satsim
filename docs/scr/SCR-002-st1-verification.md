@@ -1,6 +1,6 @@
 # SCR-002 — Pull ST[1] request verification forward as new increment M1a
 
-- Status: Proposed (approval = disposition via review and merge of the PR introducing this file)
+- Status: Implemented (spec level; implementation code follows in the M1a session)
 - Date: 2026-07-18
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ICD, SATSIM-SRS, SATSIM-SVS
@@ -61,5 +61,14 @@ Pulling ST[1] forward to M1a means:
 
 ## 4. Disposition
 
-- [ ] Approved — project lead, via review and merge of the PR introducing
-      this SCR.
+- [x] Approved — project lead (C. Möllmann), 2026-07-18, via review and merge
+      of PR #17. Implementing specification PR: #18.
+
+## 5. Findings during implementation
+
+- **V-NEG-02 was unexercisable as worded** (found while generating the §6.6
+  vectors): "V-TC-01 with octet 7 changed to `10`" leaves the original CRC in
+  place, so the packet fails the CRC check before the version check is ever
+  reached — the stimulus could never trigger the behavior it verifies.
+  Resolved in ICD Issue 3 by fixing explicit V-NEG-02 bytes with the CRC
+  recomputed (approved with PR #18).

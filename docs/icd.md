@@ -1,9 +1,10 @@
 # SatSim Space–Ground Interface Control Document (ICD)
 
-- Configuration item: SATSIM-ICD, Issue 2 (draft)
+- Configuration item: SATSIM-ICD, Issue 3 (draft)
 - Applicable: ECSS-E-ST-70-41C (PUS-C), CCSDS 133.0-B (Space Packet Protocol), CCSDS 301.0-B (Time Codes)
-- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset)
+- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset)
 - Issue 2 (draft) changes vs Issue 1: added §9 (ST[3] housekeeping subset), reference vectors §6.4/§6.5, OP-3; open points renumbered §9→§10. Per SCR-001.
+- Issue 3 (draft) changes vs Issue 2: added §10 (ST[1] request verification subset), reference vectors §6.6; V-NEG-02 clarified with explicit bytes (CRC recomputed — as previously worded the packet failed the CRC check before the version check); frontend default ack flags §3 updated; OP-1 closed, OP-3 re-targeted to M1b; open points renumbered §10→§11. Per SCR-002.
 
 > **RULE (binding, see CLAUDE.md):** The reference vectors in §6 are the authoritative
 > byte-level contract. Implementation and tests conform to this document; this
@@ -35,7 +36,7 @@ Packet data field = secondary header + application data + packet error control (
 | Field | Bits | Value/Convention |
 |---|---|---|
 | TC packet PUS version number | 4 | 2 (PUS-C) |
-| Acknowledgement flags | 4 | bit3=acceptance, bit2=start, bit1=progress, bit0=completion. Default for frontend: 0b0000 (PoC; ST[1] reports from M2). |
+| Acknowledgement flags | 4 | bit3=acceptance, bit2=start, bit1=progress, bit0=completion. Default for frontend from M1a: 0b1001 (acceptance+completion, user-overridable; SCR-002). Success reports per §10 only for set flags; failure reports always. |
 | Service type | 8 | e.g. 17 |
 | Message subtype | 8 | e.g. 1 |
 | Source ID | 16 | 0 (single ground source, ADR-0002) |
@@ -100,8 +101,20 @@ V-TM-02: as V-TM-01 but seq count=1, msg type counter=1, T=1.5 s:
 
 ### 6.3 Negative vectors
 
-- V-NEG-01: V-TC-01 with last octet changed to `84` → shall be rejected (CRC failure).
-- V-NEG-02: V-TC-01 with octet 7 changed to `10` (PUS version 1) → shall be rejected (unsupported PUS version).
+- V-NEG-01: V-TC-01 with last octet changed to `84` → shall be rejected (CRC
+  failure); no TM of any kind (an untrusted packet has no attributable request
+  to verify, §10.2).
+- V-NEG-02: V-TC-01 with octet 7 changed to `10` (PUS version 1) **and the CRC
+  recomputed** so that the version check — not the CRC check — is exercised
+  (clarified per SCR-002; as previously worded the stale CRC failed first).
+  Full bytes (13 octets):
+
+```
+18 64 C0 00 00 06 10 11 01 00 00 F6 6D
+```
+
+  Shall be rejected (unsupported PUS version) with exactly one TM(1,2), see
+  V-TM-08.
 
 ### 6.4 ST[3] TC vectors (layouts per §9)
 
@@ -138,6 +151,49 @@ counter=1, HK-P001=0, HK-P002=1 (the report V-TM-03), HK-P003=3540 (33 octets):
 
 ```
 08 64 C0 01 00 1A 20 03 19 00 01 00 00 00 00 00 02 00 00 00 01 00 00 00 00 00 00 00 01 0D D4 52 A3
+```
+
+### 6.6 ST[1] vectors (layouts per §10)
+
+Scenario A — fresh start, V-TC-06 injected at T=0:
+
+V-TC-06: TC(17,1) as V-TC-01 but ack=0b1001 (acceptance+completion, the
+frontend default from M1a); seq count=0 (13 octets):
+
+```
+18 64 C0 00 00 06 29 11 01 00 00 52 FF
+```
+
+V-TM-05: TM(1,1) successful acceptance for V-TC-06 — seq count=0, msg type
+counter=0, T=0.0 s, request ID `18 64 C0 00` (25 octets):
+
+```
+08 64 C0 00 00 12 20 01 01 00 00 00 00 00 00 00 00 00 00 18 64 C0 00 1C BC
+```
+
+V-TM-06: TM(17,2) in the same scenario — as V-TM-01 but seq count=1 (the
+APID-wide count 0 was consumed by V-TM-05); msg type counter=0, T=0.0 s
+(21 octets):
+
+```
+08 64 C0 01 00 0E 20 11 02 00 00 00 00 00 00 00 00 00 00 A4 62
+```
+
+V-TM-07: TM(1,7) successful completion for V-TC-06 — seq count=2, msg type
+counter=0, T=0.0 s, request ID `18 64 C0 00` (25 octets):
+
+```
+08 64 C0 02 00 12 20 01 07 00 00 00 00 00 00 00 00 00 00 18 64 C0 00 A1 B1
+```
+
+Scenario B — fresh start, V-NEG-02 injected at T=0:
+
+V-TM-08: TM(1,2) failed acceptance for V-NEG-02 — seq count=0, msg type
+counter=0, T=0.0 s, request ID `18 64 C0 00`, failure code 0x0001
+ILLEGAL_PUS_VERSION (27 octets):
+
+```
+08 64 C0 00 00 14 20 01 02 00 00 00 00 00 00 00 00 00 00 18 64 C0 00 00 01 BC E4
 ```
 
 ## 7. Packet Error Control: CRC-16
@@ -222,8 +278,67 @@ Generation is driven exclusively by simulated time and performed by the OBSW
 target within granted execution windows (ADR-0006); wall-clock timers are
 prohibited (SIM-REQ-TIME-001).
 
-## 10. Open points
+## 10. ST[1] Request Verification (tailored subset, SCR-002)
 
-- OP-1: ST[1] verification report formats to be added at M2 (new ICD issue).
+### 10.1 Tailored subservices
+
+| Message | Direction | Purpose |
+|---|---|---|
+| TM(1,1) | space → ground | Successful acceptance verification report |
+| TM(1,2) | space → ground | Failed acceptance verification report |
+| TM(1,7) | space → ground | Successful completion of execution verification report |
+| TM(1,8) | space → ground | Failed completion of execution verification report |
+
+Start/progress subtypes TM(1,3)…(1,6) are not implemented (no long-running
+TCs in the tailored service set).
+
+### 10.2 Generation rules
+
+- **Success reports** TM(1,1)/TM(1,7) are generated only if the corresponding
+  acknowledgement flag of the verified TC (§3: bit3 acceptance, bit0
+  completion) is set.
+- **Failure reports** TM(1,2)/TM(1,8) are generated regardless of
+  acknowledgement flags.
+- **Acceptance checks**, in order: CRC (§7) — failure discards the packet
+  silently (no attributable request exists, §6.3); PUS version = 2
+  (failure code 0x0001); service and subtype implemented per this ICD
+  (failure code 0x0002); application data well-formed — length and field
+  structure per the service sections (failure code 0x0003). First failing
+  check terminates processing with exactly one TM(1,2).
+- **Completion** verifies execution of the accepted request. Semantic
+  execution errors yield exactly one TM(1,8); the ST[3] semantic error cases
+  (§9.1) map to TM(1,8)/TM(1,2) when OP-3 is resolved at M1b.
+- Report ordering on the wire for an accepted TC: TM(1,1) (if requested) —
+  service TM (if any) — TM(1,7)/TM(1,8). A TC is never acknowledged more
+  than once per subtype.
+
+### 10.3 Report layouts (application data)
+
+TM(1,1) / TM(1,7):
+
+| Field | Size | Value/Convention |
+|---|---|---|
+| Request ID | 32 | Packet ID (octets 1–2) + packet sequence control (octets 3–4) of the verified TC. |
+
+TM(1,2) / TM(1,8): as above, followed by:
+
+| Field | Size | Value/Convention |
+|---|---|---|
+| Failure code | 16 | Per §10.4. No failure data field is transmitted (tailoring). |
+
+### 10.4 Failure codes
+
+| Code | Name | Report | Meaning |
+|---|---|---|---|
+| 0x0001 | ILLEGAL_PUS_VERSION | TM(1,2) | TC PUS version number ≠ 2 |
+| 0x0002 | ILLEGAL_SERVICE_OR_SUBTYPE | TM(1,2) | Service type or message subtype not implemented per this ICD |
+| 0x0003 | ILLEGAL_APPLICATION_DATA | TM(1,2) | Application data length or field structure invalid per the service sections |
+
+Further codes (ST[3] semantic errors: unknown SID, illegal SID, interval
+below minimum, …) are added when OP-3 is resolved at M1b.
+
+## 11. Open points
+
+- OP-1: **Closed by SCR-002** (ST[1] verification report formats: §10, vectors §6.6).
 - OP-2: Field values for source/destination ID revisit when multi-node (constellation) scenarios are introduced.
-- OP-3: ST[3] semantic error handling (§9.1) currently log-only; formalize as ST[1] failure reports at M2 (SCR-001).
+- OP-3: ST[3] semantic error handling (§9.1) currently log-only; formalize as ST[1] failure reports (§10.4) at M1b (SCR-001, re-targeted from M2 by SCR-002).
