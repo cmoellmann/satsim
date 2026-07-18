@@ -9,3 +9,4 @@ review) → Implemented (all affected documents updated) | Rejected.
 | ID | Title | Status | Date | Affected CIs | Implementing PRs |
 |----|-------|--------|------|--------------|------------------|
 | SCR-001 | Add ST[3] housekeeping subset as new increment M1b | Implemented (spec level) | 2026-07-18 | SDP, ICD, SRS, SVS | #14 (SCR + SDP), #15 (ICD Issue 2, SRS, SVS) |
+| SCR-002 | Pull ST[1] request verification forward as new increment M1a | Proposed | 2026-07-18 | SDP, ICD, SRS, SVS | #17 (SCR + SDP) |

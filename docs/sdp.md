@@ -51,7 +51,7 @@ ADR-0002), CCSDS 133.0-B, CCSDS 301.0-B.
 |---|---|---|---|
 | ACT-001 | Verify tailoring matrix and terminology against exact ECSS-E-ST-40C / Q-ST-80C clause references; add citations. | Open | before M2 baseline |
 | ACT-002 | Contact Beyond Gravity/Terma regarding cOBC simulator (TEMU) licensing once a cOBC-based target becomes concrete. | Open | before M5 planning |
-| ACT-003 | Decide ST[1] subservice subset and update ICD (OP-1). | Open | M2 |
+| ACT-003 | Decide ST[1] subservice subset and update ICD (OP-1). | Closed 2026-07-18 — resolved by SCR-002 (subset: acceptance+completion; ICD update in the SCR-002 spec PR) | M1a (was M2) |
 | ACT-004 | Extend TraceabilityCheck so a milestone gate fails when an in-scope R-verified requirement has no recorded review verdict in the milestone report (`docs/test-reports/M<n>-report.md`). Draft SRS/SVS entries per CLAUDE.md rule 3. Proposal approved 2026-07-18 (M0 gate review). | Open | M1 |
 
 ### 2.3 Change control
@@ -89,8 +89,9 @@ traceability matrix generated and committed, tag created, milestone checklist
 |---|---|---|
 | M0 | Walking skeleton: Maven build, CI, interface trio (`SimulationClock`, `EmulatorControl`, `SpaceLink`), loopback OBSW target implementing `EmulatorControl` (ADR-0006 C5), CRC + primary header codec | Build+CI green; V-anchors of ICD §7 pass; ≥1 traced test |
 | M1 | **Goal increment:** full TC(17,1)→TM(17,2) chain via web frontend; PUS-C TC/TM codecs against ICD §6 vectors; REST/WS API; determinism replay test (C6) | All ICD §6 vectors pass incl. negatives; manual frontend smoke test recorded; SRS M1-scope requirements all traced+passed |
+| M1a | ST[1] request verification subset (SCR-002): TM(1,1)/(1,2) acceptance, TM(1,7)/(1,8) completion; success reports per TC ack flags, failure reports always; TM(1,2) on PUS-version rejection; frontend default ack 0b1001 | All ST[1] ICD vectors pass (encode+decode); default ping yields TM(1,1)→TM(17,2)→TM(1,7); V-NEG-02 yields exactly one TM(1,2); determinism replay green incl. verification stream; frontend smoke test shows verification reports; SRS M1a-scope requirements all traced+passed |
 | M1b | ST[3] housekeeping subset (SCR-001): TC(3,1) create structure, TC(3,5)/(3,7) enable/disable, TM(3,25) report; default SID 1 periodic (1.0 s simulated time) enabled at startup | All ST[3] ICD vectors pass (encode+decode); periodic emission at correct simulated times verified; determinism replay green incl. HK stream; frontend smoke test shows periodic HK; SRS M1b-scope requirements all traced+passed |
-| M2 | ST[1] acceptance/completion reports; TCP length-framed space-packet link (ICD §8); ICD Issue 2 | ST[1] vectors added+passing; external client demo over TCP |
+| M2 | TCP length-framed space-packet link (ICD §8); ST[1] moved to M1a per SCR-002 | ICD §8 framing conformance passing (SIM-TC-015); external client demo over TCP |
 | M3 | Native OBSW demo process (small C or Rust ST[17] responder) as second OBSW target | Same SVS validation suite green against the native OBSW target unchanged |
 | M4 | Yamcs attachment trial (MDB for ST[17]/ST[1], TCP link) | TC/TM round-trip from Yamcs UI |
 | M5 | First emulator adapter: QEMU (license-free), `EmulatorControl` grant/consume sync (ADR-0006 C2/C3) | Validation suite green against QEMU OBSW target; sync conformance tests (SIM-REQ-TIME-xxx) pass |
