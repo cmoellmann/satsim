@@ -41,6 +41,12 @@
 | SIM-REQ-UI-002 | The web frontend shall display received TM live, showing raw hex and decoded header fields. | Functional | M | M1 | project goal |
 | SIM-REQ-UI-003 | The backend shall provide REST TC submission and WebSocket TM distribution per ICD §8 such that the end-to-end path is automatable without a browser. | Functional | T | M1 | ICD §8 |
 | SIM-REQ-UI-004 | The frontend shall display the raw encoded bytes of each sent TC (hex) before/after sending. | Functional | M | M1 | debugging goal |
+| SIM-REQ-UI-005 | The backend shall publish the current simulated time over the WebSocket as time frames per ICD §8.2, on session connect and at a cadence defined in simulated time (quantum 100 ms simulated); the frontend shall display it as a running OBT clock. | Functional | T+M | M1a | ICD §8 [SCR-003] |
+| SIM-REQ-UI-006 | The POST /api/tc response shall carry the injection OBT, the consumed ground sequence count, and the decoded TC fields per ICD §8.1; the frontend shall show OBT and sequence count in TC log rows. | Functional | T+M | M1a | ICD §8 [SCR-003] |
+| SIM-REQ-UI-007 | Spacecraft-side TC rejections shall be published as rejection frames (reason, packet hex, OBT) per ICD §8.2 — including CRC-failed packets, which produce no TM — and shall be displayed as rejection rows in the log. | Functional | T+M | M1a | ICD §8 [SCR-003] |
+| SIM-REQ-UI-008 | The frontend log shall support filtering by direction (TC/TM/rejection) and service type, clearing, and pausing autoscroll. | Functional | M | M1a | SCR-003 |
+| SIM-REQ-UI-009 | The frontend shall show a field-level breakdown (primary header, secondary header, application data, CRC) of a selected log entry where decoded fields are available, and shall mark undecodable packets with the first failed check. | Functional | M | M1a | SCR-003 |
+| SIM-REQ-UI-010 | The frontend compose form shall offer the TC message types of the tailored service set (ICD) as type and subtype dropdowns, each with a free-entry option for arbitrary values. | Functional | M | M1a | SCR-003 |
 | SIM-REQ-VER-001 | Upon acceptance of a TC whose acceptance acknowledgement flag is set, the simulated spacecraft shall emit exactly one TM(1,1) per ICD §10; no TM(1,1) shall be emitted when the flag is clear. | Functional | T | M1a | ICD §10 [SCR-002] |
 | SIM-REQ-VER-002 | Upon successful completion of execution of a TC whose completion acknowledgement flag is set, the simulated spacecraft shall emit exactly one TM(1,7) per ICD §10; no TM(1,7) shall be emitted when the flag is clear. | Functional | T | M1a | ICD §10 [SCR-002] |
 | SIM-REQ-VER-003 | The simulated spacecraft shall emit failure verification reports TM(1,2)/TM(1,8) per ICD §10 regardless of acknowledgement flags; a CRC-valid TC whose PUS version is not 2 shall yield exactly one TM(1,2) with failure code ILLEGAL_PUS_VERSION. | Functional | T | M1a | ICD §10 [SCR-002] |
@@ -72,3 +78,4 @@
 | 1 (draft) | 2026-07-18 | SIM-REQ-HK-001…004 added (ST[3] housekeeping subset, scope M1b) per SCR-001. |
 | 1 (draft) | 2026-07-18 | SIM-REQ-VER-001…004 added (ST[1] request verification subset, scope M1a) per SCR-002. |
 | 1 (draft) | 2026-07-18 | SIM-REQ-QA-003 added (review-verdict gate, scope M1) per ACT-004. |
+| 1 (draft) | 2026-07-18 | SIM-REQ-UI-005…010 added (HMI improvement package, scope M1a) per SCR-003. |

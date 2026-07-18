@@ -1,6 +1,6 @@
 # SCR-003 — HMI improvement package (extends increment M1a)
 
-- Status: Proposed
+- Status: Implemented (spec level; implementation code follows in the M1a session, HMI part first)
 - Date: 2026-07-18
 - Originator: project lead (C. Möllmann), from the post-M1 HMI review;
   drafted by AI assistant per SDP §6
@@ -85,7 +85,8 @@ amended accordingly (breaking change to ICD §8, new ICD issue).
 
 ## 4. Disposition
 
-- [ ] Approved — project lead, via review and merge of the SCR PR.
+- [x] Approved — project lead (C. Möllmann), 2026-07-18, via review and merge
+      of PR #29. Implementing specification PR: #30.
 
 ## 5. Findings during implementation
 
