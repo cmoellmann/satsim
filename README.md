@@ -15,31 +15,6 @@ SatSim is two experiments in one.
 
 **The question behind it:** can one engineer, with 15 years of satellite onboard-software and safety-critical systems experience, use AI-assisted development to produce flight-software-grade engineering at a fraction of the traditional effort — *without* sacrificing the integrity that makes it flight-grade? This repository is the running answer.
 
-## Status
-
-**Milestone M0 (walking skeleton) closed 2026-07-18** — tag
-[`M0`](https://github.com/cmoellmann/satsim/releases/tag/M0), twelve reviewed PRs over two working days.
-The gate record is a committed, auditable artifact, not a checkbox:
-
-- **30/30 tests green** at the baseline commit, reproduced by a clean
-  `./mvnw clean verify` — see the
-  [M0 milestone test report](docs/test-reports/M0-report.md).
-- **98.55 % line coverage** on the packet library `pus-core`
-  (indicative target: 80 %).
-- **All 8 M0 requirements traced** requirement → SVS case → annotated test
-  method, verified by the CI traceability gate (0 findings).
-- **Human review verdicts** — named, dated, with the exact evidence
-  inspected — recorded in the report for the two requirements no test can
-  prove.
-
-In place after M0: CI on every PR, CRC-16 verified against ICD anchors, CCSDS
-primary header codec, a time-mastered loopback OBSW target, the traceability
-gate, and a build-enforced wall-clock ban (Checkstyle + SpotBugs).
-
-**Next: M1** — the full TC(17,1) → TM(17,2) chain through the web frontend,
-PUS-C TC/TM codecs validated against the ICD §6 reference vectors, REST/WS
-API, and a determinism replay test (see [SDP §4](docs/sdp.md)).
-
 ## Highlights
 
 - **The ECSS standards are the input, not the afterthought.** The controlled
@@ -91,6 +66,31 @@ API, and a determinism replay test (see [SDP §4](docs/sdp.md)).
 | M0 milestone test report | [docs/test-reports/M0-report.md](docs/test-reports/M0-report.md) | Gate record: test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
+
+## Status
+
+**Milestone M0 (walking skeleton) closed 2026-07-18** — tag
+[`M0`](https://github.com/cmoellmann/satsim/releases/tag/M0), twelve reviewed PRs over two working days.
+The gate record is a committed, auditable artifact, not a checkbox:
+
+- **30/30 tests green** at the baseline commit, reproduced by a clean
+  `./mvnw clean verify` — see the
+  [M0 milestone test report](docs/test-reports/M0-report.md).
+- **98.55 % line coverage** on the packet library `pus-core`
+  (indicative target: 80 %).
+- **All 8 M0 requirements traced** requirement → SVS case → annotated test
+  method, verified by the CI traceability gate (0 findings).
+- **Human review verdicts** — named, dated, with the exact evidence
+  inspected — recorded in the report for the two requirements no test can
+  prove.
+
+In place after M0: CI on every PR, CRC-16 verified against ICD anchors, CCSDS
+primary header codec, a time-mastered loopback OBSW target, the traceability
+gate, and a build-enforced wall-clock ban (Checkstyle + SpotBugs).
+
+**Next: M1** — the full TC(17,1) → TM(17,2) chain through the web frontend,
+PUS-C TC/TM codecs validated against the ICD §6 reference vectors, REST/WS
+API, and a determinism replay test (see [SDP §4](docs/sdp.md)).
 
 ## Getting started
 
