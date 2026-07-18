@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  SatSim Checkstyle configuration.
+
+  Purpose: enforce the wall-clock ban only (CLAUDE.md rule 2 / SIM-REQ-TIME-001,
+  analysis part). Simulation logic must never read wall-clock time directly;
+  time must be sourced from SimulationClock. This is a forbidden-API gate, not
+  a style guide - it deliberately contains no formatting/style modules so that
+  existing, otherwise-compliant code is unaffected.
+
+  Sanctioned exception: the (future) interactive pacing policy under
+  org/satsim/sim/pacing/ is allowed to read wall-clock time (see
+  config/checkstyle/suppressions.xml).
+-->
+<module name="Checker">
+
+  <property name="charset" value="UTF-8"/>
+  <property name="severity" value="error"/>
+
+  <module name="SuppressionFilter">
+    <property name="file" value="${config_loc}/suppressions.xml"/>
+    <property name="optional" value="false"/>
+  </module>
+
+  <module name="TreeWalker">
+
+    <!-- System.currentTimeMillis() / System.nanoTime() -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="WallClockBanSystemTime"/>
+      <property name="format" value="\bSystem\s*\.\s*(currentTimeMillis|nanoTime)\s*\("/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message"
+                value="Wall-clock read via System.currentTimeMillis()/System.nanoTime() is banned in simulation logic (CLAUDE.md rule 2, SIM-REQ-TIME-001). Use SimulationClock instead."/>
+    </module>
+
+    <!-- <java.time type>.now(...) for the clock-bearing java.time value types -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="WallClockBanJavaTimeNow"/>
+      <property name="format"
+                value="\b(Instant|LocalDate|LocalTime|LocalDateTime|ZonedDateTime|OffsetDateTime|OffsetTime|Year|YearMonth|MonthDay)\s*\.\s*now\s*\("/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message"
+                value="Wall-clock read via java.time now() is banned in simulation logic (CLAUDE.md rule 2, SIM-REQ-TIME-001). Use SimulationClock instead."/>
+    </module>
+
+    <!-- Clock.systemUTC() / Clock.systemDefaultZone() / Clock.system(zone) -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="WallClockBanClockFactory"/>
+      <property name="format" value="\bClock\s*\.\s*system(UTC|DefaultZone|)\s*\("/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message"
+                value="Wall-clock Clock.system...() factory is banned in simulation logic (CLAUDE.md rule 2, SIM-REQ-TIME-001). Use SimulationClock instead."/>
+    </module>
+
+    <!-- new Date() / new java.util.Date() -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="WallClockBanNewDate"/>
+      <property name="format" value="\bnew\s+(java\s*\.\s*util\s*\.\s*)?Date\s*\("/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message"
+                value="Wall-clock read via new Date() is banned in simulation logic (CLAUDE.md rule 2, SIM-REQ-TIME-001). Use SimulationClock instead."/>
+    </module>
+
+  </module>
+
+</module>

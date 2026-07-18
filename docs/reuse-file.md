@@ -23,6 +23,10 @@
 | actions/setup-java | v4 | build (CI) | MIT | None (CI infrastructure) | 2026-07-12, C. Möllmann (merge of PR #3) |
 | Eclipse Temurin JDK (CI runner) | 21 | build (CI) | GPL-2.0-only WITH Classpath-exception-2.0 | None (CI toolchain, not redistributed) | 2026-07-12, C. Möllmann (merge of PR #3) |
 | JDK (Java SE) | 21 | runtime platform | per distribution (e.g. OpenJDK: GPL-2.0-only WITH Classpath-exception-2.0) | None with Classpath Exception; JDK itself is not redistributed | 2026-07-12, C. Möllmann (bootstrap) |
+| maven-checkstyle-plugin | 3.6.0 | build | Apache-2.0 | None (build plugin) | 2026-07-18, C. Möllmann (merge of PR #11) |
+| Checkstyle (tool, plugin dependency) | 10.21.1 | build | LGPL-2.1-or-later | None — executes at build time only; not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #11) |
+| spotbugs-maven-plugin | 4.8.6.6 | build | Apache-2.0 | None (build plugin) | 2026-07-18, C. Möllmann (merge of PR #11) |
+| SpotBugs (tool, resolved by plugin) | 4.8.6 | build | LGPL-2.1-only | None — executes at build time only; not linked into or distributed with SatSim | 2026-07-18, C. Möllmann (merge of PR #11) |
 
 Default Maven core plugins (compiler, resources, jar, install, deploy) are
 Apache-2.0 and covered by the Apache Maven entry; versions are inherited from
@@ -33,8 +37,6 @@ the Maven distribution unless pinned in `pom.xml`.
 | Component | Anticipated scope | License (SPDX) | Notes | Milestone |
 |---|---|---|---|---|
 | Spring Boot (web, websocket) | runtime (`simulator` only) | Apache-2.0 | Permissive; no copyleft obligations beyond notice retention | M0/M1 |
-| Checkstyle (via maven plugin) | build | LGPL-2.1-or-later (tool), plugin Apache-2.0 | Build-time only; LGPL tool is not linked into or distributed with SatSim | M0 |
-| SpotBugs (via maven plugin) | build | LGPL-2.1-only | Build-time only; not distributed | M0 |
 
 ## 3. Open licensing items
 
