@@ -34,6 +34,7 @@
 | SIM-TC-023 | SIM-REQ-VER-001, SIM-REQ-VER-002 | Ack-flag-driven verification sequence | A | Fresh start: injecting V-TC-06 (ack=0b1001) at T=0 yields exactly TM(1,1), TM(17,2), TM(1,7) in this order, byte-identical to V-TM-05/06/07; separately, fresh start: injecting V-TC-01 (ack=0b0000) yields exactly one TM(17,2) and no ST[1] report. (Scope: M1a) |
 | SIM-TC-024 | SIM-REQ-VER-003 | Acceptance failure report | A | Fresh start: injecting V-NEG-02 at T=0 yields exactly one TM(1,2), byte-identical to V-TM-08, and no TM(17,2). (Scope: M1a. The TM(1,8) completion-failure path is exercised from M1b, when ST[3] semantic errors map to ST[1] per ICD OP-3.) |
 | SIM-TC-025 | SIM-REQ-VER-004 | Frontend smoke test: verification reports visible | M | Checklist: compose dialog defaults to ack 0b1001; sending a ping shows TM(1,1), TM(17,2), TM(1,7) in the live log with decoded fields. Verdict + date + name recorded in milestone report. (Scope: M1a) |
+| SIM-TC-026 | SIM-REQ-QA-003 | Review-verdict gate self-check | A | With deliberate fixtures: an in-scope R-verified requirement without recorded review verdict yields a gate-failing REQ-NO-REVIEW finding; a recorded reviewed-FAIL verdict yields an error finding; requirements with reviewed-PASS verdicts yield no finding (clean fixture set stays clean). (Scope: M1, per ACT-004.) |
 
 ## Change log
 
@@ -43,3 +44,4 @@
 | 1 (draft) | 2026-07-12 | SIM-TC-017 added: quantum reconfiguration (M5), closes coverage gap for SIM-REQ-TIME-006 found by traceability check (PR #8). |
 | 1 (draft) | 2026-07-18 | SIM-TC-018…021 added (ST[3] housekeeping subset, scope M1b) per SCR-001. |
 | 1 (draft) | 2026-07-18 | SIM-TC-022…025 added (ST[1] request verification subset, scope M1a); SIM-TC-007 pass criterion amended (TM(1,2) on PUS-version rejection from M1a). Per SCR-002. |
+| 1 (draft) | 2026-07-18 | SIM-TC-026 added (review-verdict gate self-check, scope M1) per ACT-004. |

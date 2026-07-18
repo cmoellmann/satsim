@@ -62,6 +62,7 @@
 | SIM-REQ-LINK-003 | The validation test suite shall pass unchanged against any conforming OBSW target (loopback, native process, emulator). | Portability | T | M3 | [ADR-0001] |
 | SIM-REQ-QA-001 | Every validation test shall carry @TestCase and @Requirement annotations resolvable against SVS and SRS. | Verifiability | A | M0 | SDP §5 |
 | SIM-REQ-QA-002 | CI shall fail a milestone gate if any SRS requirement in scope lacks a passing validation test (or recorded manual verdict). | Verifiability | A | M0 | SDP §5 |
+| SIM-REQ-QA-003 | A milestone gate shall fail if any in-scope requirement with review verification lacks a recorded review verdict in the milestone test reports, or has a recorded reviewed-FAIL verdict. | Verifiability | A | M1 | SDP §5 [ACT-004] |
 
 ## Change log
 
@@ -70,3 +71,4 @@
 | 1 (draft) | 2026-07-12 | Initial set for M0–M3 scope (+M5 sync item). Lowercase "shall"; functional / non-functional split with Category column and defined category vocabulary. |
 | 1 (draft) | 2026-07-18 | SIM-REQ-HK-001…004 added (ST[3] housekeeping subset, scope M1b) per SCR-001. |
 | 1 (draft) | 2026-07-18 | SIM-REQ-VER-001…004 added (ST[1] request verification subset, scope M1a) per SCR-002. |
+| 1 (draft) | 2026-07-18 | SIM-REQ-QA-003 added (review-verdict gate, scope M1) per ACT-004. |
