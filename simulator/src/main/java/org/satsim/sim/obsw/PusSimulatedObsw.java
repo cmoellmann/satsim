@@ -1,6 +1,7 @@
 package org.satsim.sim.obsw;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -17,14 +18,18 @@ import org.satsim.pus.tm.TmSecondaryHeader;
  * The PUS-C implementation of the simulated on-board software, tailored per the ICD: single
  * APID 100 (ADR-0003), strict PUS-C (ADR-0002). M1 service set: ST[17]
  * connection test — a valid TC(17,1) yields exactly one TM(17,2)
- * [SIM-REQ-PUS-008, SIM-REQ-PUS-010].
+ * [SIM-REQ-PUS-008, SIM-REQ-PUS-010]. M1a adds the ST[1] request
+ * verification subset (ICD §10, SCR-002): accepted TCs get TM(1,1)/TM(1,7)
+ * success reports gated by their acknowledgement flags, and rejections get a
+ * TM(1,2) failure report [SIM-REQ-VER-001, SIM-REQ-VER-002, SIM-REQ-VER-003].
  *
  * <p>Acceptance checks in ICD §10.2 order: CRC/structure (via
  * {@link TcPacket#decode}), then PUS version = 2, then service/subtype
- * implemented. In M1 every rejection discards the TC without TM; each
- * rejection is observable in the log and on {@link #rejections()}
- * [SIM-REQ-PUS-005, SIM-REQ-PUS-006]. ST[1] failure reports arrive with M1a
- * (SCR-002).
+ * implemented. A CRC/structure failure discards the TC silently — no
+ * attributable request exists (ICD §6.3) — while the PUS-version and
+ * service/subtype checks each yield exactly one TM(1,2) failure report in
+ * addition to the existing log/{@link #rejections()} observability
+ * [SIM-REQ-PUS-005, SIM-REQ-PUS-006, SIM-REQ-VER-003].
  *
  * <p>TM packet sequence counts increment per APID (wrap at
  * {@code 16383}); message type counters increment per (service, subtype)
@@ -36,9 +41,9 @@ import org.satsim.pus.tm.TmSecondaryHeader;
  */
 public final class PusSimulatedObsw implements SimulatedObsw {
 
-  /** Why a TC was discarded (M1); aligns with the ICD §10.4 codes for M1a. */
+  /** Why a TC was discarded; names align with the ICD §10.4 failure codes. */
   public enum RejectReason {
-    /** Structural decode failure or CRC error (ICD §6.3: silent discard). */
+    /** Structural decode failure or CRC error (ICD §6.3: silent discard, no TM). */
     NOT_A_PACKET,
     /** TC packet PUS version number is not 2 (ICD §10.4 code 0x0001). */
     ILLEGAL_PUS_VERSION,
@@ -73,17 +78,28 @@ public final class PusSimulatedObsw implements SimulatedObsw {
       reject(RejectReason.NOT_A_PACKET, tcPacket, e.getMessage(), nowNanos);
       return List.of();
     }
+    // ICD §10.3: request ID = packet ID (octets 0-1) + packet sequence control (octets 2-3).
+    byte[] requestId = Arrays.copyOfRange(tcPacket, 0, 4);
     TcSecondaryHeader sec = tc.secondaryHeader();
     if (sec.pusVersion() != TcSecondaryHeader.PUS_C_VERSION) {
       reject(RejectReason.ILLEGAL_PUS_VERSION, tcPacket, "PUS version " + sec.pusVersion(), nowNanos);
-      return List.of();
+      return List.of(buildTm(1, 2, failureReportAppData(requestId, RejectReason.ILLEGAL_PUS_VERSION), nowNanos));
     }
     if (sec.serviceType() != 17 || sec.messageSubtype() != 1) {
       reject(RejectReason.ILLEGAL_SERVICE_OR_SUBTYPE, tcPacket,
           "TC(" + sec.serviceType() + "," + sec.messageSubtype() + ") not implemented", nowNanos);
-      return List.of();
+      return List.of(
+          buildTm(1, 2, failureReportAppData(requestId, RejectReason.ILLEGAL_SERVICE_OR_SUBTYPE), nowNanos));
     }
-    return List.of(buildTm(17, 2, new byte[0], nowNanos));
+    List<byte[]> tms = new ArrayList<>(3);
+    if (sec.ackAcceptance()) {
+      tms.add(buildTm(1, 1, requestId, nowNanos));
+    }
+    tms.add(buildTm(17, 2, new byte[0], nowNanos));
+    if (sec.ackCompletion()) {
+      tms.add(buildTm(1, 7, requestId, nowNanos));
+    }
+    return tms;
   }
 
   /**
@@ -122,6 +138,29 @@ public final class PusSimulatedObsw implements SimulatedObsw {
   public void presetMessageTypeCounter(int serviceType, int messageSubtype, int value) {
     requireRange(value, 0, 65535, "message type counter");
     typeCounters.put(typeKey(serviceType, messageSubtype), value);
+  }
+
+  /**
+   * TM(1,2)/TM(1,8) application data per ICD §10.3: request ID followed by
+   * the 2-octet failure code per §10.4.
+   */
+  private static byte[] failureReportAppData(byte[] requestId, RejectReason reason) {
+    int failureCode = failureCode(reason);
+    byte[] appData = new byte[requestId.length + 2];
+    System.arraycopy(requestId, 0, appData, 0, requestId.length);
+    appData[requestId.length] = (byte) (failureCode >> 8);
+    appData[requestId.length + 1] = (byte) failureCode;
+    return appData;
+  }
+
+  /** ICD §10.4 failure codes; {@link RejectReason#NOT_A_PACKET} has none (silent discard). */
+  private static int failureCode(RejectReason reason) {
+    return switch (reason) {
+      case ILLEGAL_PUS_VERSION -> 0x0001;
+      case ILLEGAL_SERVICE_OR_SUBTYPE -> 0x0002;
+      case NOT_A_PACKET -> throw new IllegalArgumentException(
+          "NOT_A_PACKET has no ICD §10.4 failure code (silent discard, §6.3)");
+    };
   }
 
   private byte[] buildTm(int serviceType, int messageSubtype, byte[] appData, long nowNanos) {

@@ -43,7 +43,11 @@ class DeterminismReplayTest {
     assertArrayEquals(sha256.digest(firstRun), MessageDigest.getInstance("SHA-256").digest(secondRun));
     // Redundant with the hash check, but pinpoints the first diverging octet on failure.
     assertArrayEquals(firstRun, secondRun);
-    assertEquals(42, firstRun.length, "expected two 21-octet TM(17,2) in the stream");
+    // M1a (SCR-002): V-TC-01 (ack=0b0000) yields one 21-octet TM(17,2); V-TC-02
+    // (ack=0b1111) additionally yields TM(1,1) and TM(1,7), 25 octets each
+    // (ICD §10.3); V-NEG-02 now yields one 27-octet TM(1,2) instead of no TM.
+    // 21 + (25 + 21 + 25) + 27 = 119.
+    assertEquals(119, firstRun.length, "expected TM(17,2) + ST[1] verification reports in the stream");
   }
 
   /** Runs the fixed script on a fresh chain; returns the concatenated TM stream. */
