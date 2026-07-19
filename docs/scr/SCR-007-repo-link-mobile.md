@@ -55,5 +55,20 @@ Two frontend-only changes, as new increment **M1e**:
 
 ## 4. Disposition
 
-- [ ] Approved — project lead (C. Möllmann), via review and merge of
-      specification PR #71.
+- [x] Approved — project lead (C. Möllmann), 2026-07-19, via review and
+      merge of specification PR #71.
+
+## 5. Findings during implementation
+
+- The frontend chunk was delegated to the implementer agent (Sonnet) per
+  the announce-first protocol; the delegated diff matched the hand-off
+  spec exactly. Two defects found in **review of the hand-off spec
+  itself** (not the implementation), via headless-browser self-check at
+  360 px with a populated log: (1) the squeezed log table wrapped the
+  break-all hex into very tall rows; (2) fixing that with nowrap let the
+  table's min-content width propagate through the cards' automatic grid
+  min-width and drag the whole page wider than the viewport. Both fixed
+  in review with two additional media-query rules (`#log td.hex-cell`
+  nowrap; `.card { min-width: 0 }`). Desktop rendering re-checked
+  unchanged at 1440 px. Formal verdicts remain with SIM-TC-039/040 at
+  the M1e gate.

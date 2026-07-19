@@ -384,6 +384,17 @@ exclusively backend-side — the compose preview still round-trips through
 already did for the §9.4/§10 TM interpretation; the space-link bytes
 themselves are still produced solely by the backend encoder.
 
+The header carries a permanent link to the public source repository
+[SIM-REQ-UI-015, SCR-007]. `style.css` keeps two presentation regimes:
+the desktop layout — page cap sized for single-line TM(3,25) hex
+(SCR-006) — is untouched, and a single ≤ 640 px media query reflows
+header, compose form and log controls into a stacked layout
+[SIM-REQ-UI-016, SCR-007]. In that regime the log table becomes a block
+scroll container inside its card with the hex column forced to one line,
+and the cards drop their automatic grid min-width — so wide log content
+scrolls within its own container and can never drag the page itself
+beyond the viewport.
+
 ## 4. Runtime view — threads and state ownership
 
 There are exactly three thread roles; **all simulation state has a single
