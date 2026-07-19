@@ -1,0 +1,11 @@
+# Render blueprint: SatSim public demo instance (free tier).
+# One shared simulator: all visitors see the same spacecraft and each
+# other's telecommands. The free instance spins down after ~15 min idle;
+# the next visit restarts it with a fresh simulation (OBT from zero).
+services:
+  - type: web
+    name: satsim
+    runtime: docker
+    plan: free
+    branch: master
+    healthCheckPath: /
