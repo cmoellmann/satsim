@@ -83,5 +83,8 @@ link, where ground-side clients will need a TC echo anyway.
 - Disposition: fix, approved 2026-07-19 via review and merge of PR #55.
 - SCR-006 raised 2026-07-19 (SIM-REQ-UI-014, SIM-TC-037; item 1 of the M1d
   HMI presentation package).
-- Pending: implementation PR (M1d), SIM-TC-037 verdict at the M1d gate,
-  closure date.
+- Fix implemented: sorted DOM insertion by full-precision `timeSeconds` with
+  TC < rejection < TM tiebreak at equal time, stable within equal keys
+  (`app.js`, PR #64). Verified headless (Chromium/CDP): ping renders
+  TM(1,7)/TM(17,2)/TM(1,1)/TC(17,1) top-down at identical OBT.
+- Pending: SIM-TC-037 verdict at the M1d gate, closure date.

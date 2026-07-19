@@ -103,6 +103,7 @@ level — is described in the [Software Design Document](docs/sdd.md).
 | [`M1a`](https://github.com/cmoellmann/satsim/releases/tag/M1a) | 2026-07-18 | HMI package ([SCR-003](docs/scr/SCR-003-hmi-improvements.md)): OBT clock, rejection rows, detail view. ST[1] request verification ([SCR-002](docs/scr/SCR-002-st1-verification.md)): TM(1,1)/(1,2)/(1,7) | [M1a report](docs/test-reports/M1a-report.md) |
 | [`M1b`](https://github.com/cmoellmann/satsim/releases/tag/M1b) | 2026-07-19 | ST[3] housekeeping ([SCR-001](docs/scr/SCR-001-st3-housekeeping.md)): periodic TM(3,25) from boot, structure lifecycle, ST[1] TM(1,8) semantic-error reports (ICD OP-3 resolved) | [M1b report](docs/test-reports/M1b-report.md) |
 | [`M1c`](https://github.com/cmoellmann/satsim/releases/tag/M1c) | 2026-07-19 | HK compose usability ([SCR-004](docs/scr/SCR-004-hk-compose-usability.md)): structured TC(3,1)/(3,5)/(3,7) compose, interpreted ST[3] TC detail, inline TM(1,2)/(1,8) failure codes | [M1c report](docs/test-reports/M1c-report.md) |
+| [`M1d`](https://github.com/cmoellmann/satsim/releases/tag/M1d) | 2026-07-19 | HMI presentation ([SCR-006](docs/scr/SCR-006-hmi-presentation.md)) from the first [SPR campaign](docs/spr/SPR-LOG.md): causal log ordering, failure-code column, numeric dropdowns, widened layout | [M1d report](docs/test-reports/M1d-report.md) |
 
 Currently: **130/130 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
