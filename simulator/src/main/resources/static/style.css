@@ -61,6 +61,9 @@ h2 { font-size: 0.95rem; margin: 0 0 0.7rem; color: var(--accent); }
 .status.online { color: var(--tm); }
 .status.offline { color: var(--err); }
 
+.repo-link { font-size: 0.8rem; color: var(--accent); text-decoration: none; }
+.repo-link:hover { text-decoration: underline; }
+
 main {
   /* Sized so the tailored set's longest packet (TM(3,25) default-SID
      report) keeps its raw hex on one log line at common desktop widths
@@ -209,3 +212,28 @@ tr.detail-row td { background: #10151c; padding: 0.6rem 1rem 0.8rem; }
 }
 .detail dt { color: var(--muted); }
 .detail dd { margin: 0; font-family: ui-monospace, monospace; word-break: break-all; }
+
+/* Narrow-viewport reflow (SCR-007/SIM-REQ-UI-016): header, compose form and
+   log controls stack without overlap or clipping down to 360 px CSS width;
+   wide log content scrolls within its own container, not the page. */
+@media (max-width: 640px) {
+  header { flex-direction: column; align-items: stretch; padding: 0.8rem 1rem; }
+  .head-right { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
+  .obt { flex-wrap: wrap; }
+  h1 { font-size: 1.35rem; }
+  main { padding: 0 0.6rem; }
+  /* min-width 0: as grid items the cards otherwise take the nowrap hex
+     table's min-content width and drag the whole page wider than the
+     viewport — the scroll must stay inside #log, not on the page. */
+  .card { padding: 0.7rem; min-width: 0; }
+  .row { gap: 0.6rem; }
+  select { min-width: 0; }
+  fieldset { flex-wrap: wrap; }
+  .log-controls { margin-bottom: 0; }
+  /* Confines residual table width to the log card — scrolls within its
+     container, never the page. */
+  #log { display: block; overflow-x: auto; }
+  /* In the squeezed table the break-all hex would wrap into very tall rows;
+     keep hex on one line and let it scroll inside the card instead. */
+  #log td.hex-cell { word-break: normal; white-space: nowrap; }
+}
