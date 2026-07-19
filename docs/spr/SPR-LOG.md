@@ -18,3 +18,4 @@ cross-reference each other.
 | ID | Title | Status | Severity | Reported | Affected CI / component | Disposition / closing PRs |
 |----|-------|--------|----------|----------|-------------------------|---------------------------|
 | SPR-001 | Frontend log can show response TM rows as preceding the TC that caused them | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | proposed: fix (sorted insertion + SCR-006 for SRS/SVS) |
+| SPR-002 | Failure code embedded in the type column impairs log readability | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | proposed: reject as-designed → convert to SCR (dedicated column) |
