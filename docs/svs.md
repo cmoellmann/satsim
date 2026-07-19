@@ -48,6 +48,9 @@
 | SIM-TC-037 | SIM-REQ-UI-014 | Causal log ordering at equal OBT | M | Checklist, fresh simulator: a ping with default ack flags yields, top-down in the newest-first log, TM(1,7), TM(17,2), TM(1,1), TC(17,1) — the TC row below all its responses despite identical OBT; repeated five times without a single inversion; a structured TC(3,1) with interval 50 ms shows its TM(1,8) above the TC row. Verdict + date + name recorded in milestone report. (Scope: M1d, per SCR-006/SPR-001.) |
 | SIM-TC-038 | SIM-REQ-UI-002, SIM-REQ-UI-010 | HMI presentation checklist | M | Checklist at a viewport ≥ 1440 px wide: the raw hex of a TM(3,25) default-SID report renders on a single log line; the "Live packet log" heading sits at the top-left of its card, aligned like "Compose TC". Verdict + date + name recorded in milestone report. (Scope: M1d, per SCR-006/SPR-005/SPR-006.) |
 
+| SIM-TC-039 | SIM-REQ-UI-015 | Repository link | M | Checklist: the console shows a clearly labelled link to the public source repository, present on both a desktop viewport and a 360 px mobile viewport; activating it leads to the repository start page (github.com/cmoellmann/satsim). Verdict + date + name recorded in milestone report. (Scope: M1e, per SCR-007.) |
+| SIM-TC-040 | SIM-REQ-UI-016 | Mobile usability checklist | M | Checklist at 360×740 CSS px (browser device emulation or real device): initial view and log-filled view show no page-level horizontal scrolling; header (title, OBT clock, link status) reflows without overlap or clipping; a ping with default ack flags can be composed and sent, its four causally ordered rows appear; the raw hex of a TM(3,25) default-SID report stays within the log card (wrapping or scrolling within it); an expanded detail view is readable without page-level horizontal scrolling. Verdict + date + name recorded in milestone report. (Scope: M1e, per SCR-007.) |
+
 ## Change log
 
 | Issue | Date | Change |
@@ -61,3 +64,4 @@
 | 1 (draft) | 2026-07-19 | SIM-TC-033 added (ST[3] semantic-error execution failure reports, scope M1b) per ICD OP-3 resolution (SCR-001). |
 | 1 (draft) | 2026-07-19 | SIM-TC-034…036 added (HK compose usability package, scope M1c) per SCR-004. |
 | 1 (draft) | 2026-07-19 | SIM-TC-037/038 added, SIM-TC-032/036 amended from M1d (HMI presentation package) per SCR-006 (from SPR-001/002/004/005/006). |
+| 1 (draft) | 2026-07-19 | SIM-TC-039/040 added (repository link, mobile usability package, scope M1e) per SCR-007. |

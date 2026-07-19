@@ -51,6 +51,8 @@
 | SIM-REQ-UI-012 | The packet-log detail view shall decode the application data of TC(3,1)/(3,5)/(3,7) entries into named fields per ICD §9.2/§9.3, naming parameters per ICD §9.5; application data not matching the ICD layout shall be marked as such and shown as raw hex. | Functional | M | M1c | ICD §9 [SCR-004] |
 | SIM-REQ-UI-013 | The frontend shall display the ICD §10.4 failure-code name of TM(1,2) and TM(1,8) entries directly in the log row, without requiring the detail view; unknown codes shall be shown as hex. | Functional | M | M1c | ICD §10 [SCR-004] |
 | SIM-REQ-UI-014 | The frontend packet log shall present entries in causal order regardless of the arrival order of the web-API channels: a TC row shall precede the TM and rejection rows caused by it, and TM rows carrying equal on-board time shall appear in emission order. | Functional | M | M1d | ICD §10 [SCR-006, SPR-001] |
+| SIM-REQ-UI-015 | The frontend shall display a clearly labelled link to the project's public source repository; following it shall lead to the repository start page. | Functional | M | M1e | SCR-007 |
+| SIM-REQ-UI-016 | On narrow viewports down to 360 px CSS width, the frontend shall remain fully operable: header, compose form and log controls shall reflow without overlap or clipping, page-level horizontal scrolling shall not occur, and wide log content (raw hex, detail view) shall wrap or scroll within its own container. | Functional | M | M1e | SCR-007 |
 | SIM-REQ-VER-001 | Upon acceptance of a TC whose acceptance acknowledgement flag is set, the simulated spacecraft shall emit exactly one TM(1,1) per ICD §10; no TM(1,1) shall be emitted when the flag is clear. | Functional | T | M1a | ICD §10 [SCR-002] |
 | SIM-REQ-VER-002 | Upon successful completion of execution of a TC whose completion acknowledgement flag is set, the simulated spacecraft shall emit exactly one TM(1,7) per ICD §10; no TM(1,7) shall be emitted when the flag is clear. | Functional | T | M1a | ICD §10 [SCR-002] |
 | SIM-REQ-VER-003 | The simulated spacecraft shall emit failure verification reports TM(1,2)/TM(1,8) per ICD §10 regardless of acknowledgement flags; a CRC-valid TC whose PUS version is not 2 shall yield exactly one TM(1,2) with failure code ILLEGAL_PUS_VERSION. | Functional | T | M1a | ICD §10 [SCR-002] |
@@ -85,3 +87,4 @@
 | 1 (draft) | 2026-07-18 | SIM-REQ-UI-005…010 added (HMI improvement package, scope M1a) per SCR-003. |
 | 1 (draft) | 2026-07-19 | SIM-REQ-UI-011…013 added (HK compose usability package, scope M1c) per SCR-004. |
 | 1 (draft) | 2026-07-19 | SIM-REQ-UI-014 added (causal log ordering, scope M1d) per SCR-006 (from SPR-001). |
+| 1 (draft) | 2026-07-19 | SIM-REQ-UI-015/016 added (repository link, mobile usability, scope M1e) per SCR-007. |
