@@ -92,10 +92,11 @@ class HmiWebApiTest {
       assertEquals(0, onConnect.get("timeFine").asInt());
 
       simulation.advanceBy(1_000_000_000L);
-      List<JsonNode> timeFrames = new ArrayList<>();
-      for (int i = 0; i < 10; i++) {
-        timeFrames.add(nextFrame(collector));
-      }
+      // 11 frames: 10 time frames at the 100 ms quantum plus the default
+      // SID 1 TM(3,25) at T=1.0 s (M1b) — filter to the time frames; the SVS
+      // criterion constrains their monotonicity, not the interleaved TM.
+      List<JsonNode> timeFrames = byKind(drainFrames(collector, 11), "time");
+      assertEquals(10, timeFrames.size());
       for (int i = 0; i < 10; i++) {
         JsonNode frame = timeFrames.get(i);
         CucTime expected = CucTime.ofNanos((i + 1) * QUANTUM_NANOS);
@@ -167,9 +168,12 @@ class HmiWebApiTest {
     TextCollector collector = new TextCollector();
     WebSocket socket = connect(collector);
     try {
+      // Advance below the 1.0 s default-HK boundary (M1b): the "no TM"
+      // criterion refers to the discarded TC and must not be blurred by the
+      // periodic SID 1 report.
       rest.postForEntity("/api/tc", Map.of("hex", V_TC_01_BROKEN_CRC_HEX), Map.class);
-      simulation.advanceBy(1_000_000_000L);
-      List<JsonNode> frames = drainFrames(collector, 11);
+      simulation.advanceBy(500_000_000L);
+      List<JsonNode> frames = drainFrames(collector, 6);
       List<JsonNode> rejections = byKind(frames, "rejection");
       assertEquals(1, rejections.size(), "exactly one rejection frame expected");
       assertEquals("NOT_A_PACKET", rejections.get(0).get("reason").asText());
