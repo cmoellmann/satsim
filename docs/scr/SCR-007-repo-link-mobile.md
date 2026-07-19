@@ -1,6 +1,6 @@
 # SCR-007 — Repository link and mobile usability package (new increment M1e)
 
-- Status: Proposed (this specification PR: SCR + SDP + SRS + SVS)
+- Status: Proposed (specification PR #71: SCR + SDP + SRS + SVS)
 - Date: 2026-07-19
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-SRS, SATSIM-SVS
@@ -55,5 +55,5 @@ Two frontend-only changes, as new increment **M1e**:
 
 ## 4. Disposition
 
-- [ ] Approved — project lead (C. Möllmann), via review and merge of this
-      specification PR.
+- [ ] Approved — project lead (C. Möllmann), via review and merge of
+      specification PR #71.
