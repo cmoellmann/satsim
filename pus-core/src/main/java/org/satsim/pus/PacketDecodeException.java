@@ -1,11 +1,17 @@
 package org.satsim.pus;
 
 /**
- * Checked exception raised when decoding a space packet fails a structural or
- * error-control check (ICD §6.3/§7). Decoding stops at the first violated
- * check, in the fixed order: minimum length, packet data length consistency,
- * CRC-16. No PUS-version or APID policy checks are performed by decoders;
- * those are simulator policy (ICD §10.2). [SIM-REQ-PUS-005]
+ * Checked exception raised when decoding a space packet, or a service
+ * application data field, fails a structural check (ICD §6.3/§7, or the
+ * per-service application data layouts, e.g. ICD §9.2/§9.3/§9.4). Space
+ * packet decoding (see {@code TcPacket}/{@code TmPacket}) stops at the first
+ * violated check, in the fixed order: minimum length, packet data length
+ * consistency, CRC-16. Application data codecs (e.g. {@code org.satsim.pus.st3})
+ * use the same exception type for their own structural checks (count fields
+ * out of range, declared/exact length mismatches); semantic validation is
+ * explicitly out of scope for all decoders and is simulator policy
+ * (ICD §9.1/§10.2). No PUS-version or APID policy checks are performed by
+ * decoders either. [SIM-REQ-PUS-005]
  */
 public final class PacketDecodeException extends Exception {
 
@@ -13,12 +19,14 @@ public final class PacketDecodeException extends Exception {
 
   /** Category of decode failure. */
   public enum Reason {
-    /** Fewer octets than the minimum structural length (primary + secondary header + CRC). */
+    /** Fewer octets than the minimum structural length required to decode. */
     TOO_SHORT,
-    /** Packet length does not match the primary header's declared packet data length. */
+    /** Length does not match the length implied by a declared header/count field. */
     LENGTH_MISMATCH,
     /** CRC-16 verification (ICD §7) failed. */
-    CRC_ERROR
+    CRC_ERROR,
+    /** A structurally present count field is outside its permitted range (e.g. ICD §9.2 N1, §9.3 N). */
+    FIELD_OUT_OF_RANGE
   }
 
   private final Reason reason;
