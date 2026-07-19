@@ -144,6 +144,10 @@ external clients and Yamcs.
 - **No external transport.** The TCP length-framed space-packet link (M2)
   and Yamcs attachment (M4) are not built yet; today the only way in is
   REST/WS.
+- **TM/TC definitions are hard-coded, not database-driven.** The service
+  tailoring and the default TM(3,25) housekeeping structure live in code
+  (with the ICD as the human-readable contract); there is no SCOS-2000 MIB
+  or XTCE definition from which they are generated.
 - **Coverage target on pus-core only** (SDP §2.1 tailoring); other modules
   are covered by validation tests without a numeric bar.
 - **Lightweight milestone model, not the ECSS review life cycle.** ECSS
@@ -170,6 +174,10 @@ growth:
 
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
+- **Database-driven TM/TC definitions**: a SCOS-2000 MIB (or XTCE) as the
+  single source for the service tailoring and housekeeping structures —
+  which would also feed the Yamcs attachment (M4) instead of a hand-written
+  mission database.
 - **Fault injection** on the space link (drops, corruption, delays).
 - **Commercial instruction-level emulators**: TSIM, Terma TEMU/cOBC.
 - **Multi-APID / multi-spacecraft scenarios.**
