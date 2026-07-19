@@ -81,13 +81,18 @@ class WebApiEndToEndTest {
       assertEquals(V_TC_01_HEX, response.getBody().get("hex"));
 
       // ICD §8.2 (Issue 4): the stream also carries kind:"time" frames
-      // (incl. one on connect) — skip to the first TM frame.
+      // (incl. one on connect), and from M1b the default SID 1 TM(3,25)
+      // heartbeat can arrive around the 1.0 s boundary before the ping
+      // response on a slow runner — skip to the first ST[17] TM frame (the
+      // SIM-TC-012 criterion constrains the TM(17,2) frame, not the stream).
       JsonNode frame;
       do {
         String frameJson = collector.messages.poll(5, TimeUnit.SECONDS);
-        assertNotNull(frameJson, "no TM frame received on /api/tm within 5 s");
+        assertNotNull(frameJson, "no TM(17,2) frame received on /api/tm within 5 s");
         frame = json.readTree(frameJson);
-      } while (!"tm".equals(frame.get("kind").asText()));
+      } while (!"tm".equals(frame.get("kind").asText())
+          || frame.get("decoded") == null || frame.get("decoded").isNull()
+          || frame.get("decoded").get("service").asInt() != 17);
 
       // Raw hex present and a decodable TM(17,2) on APID 100.
       String tmHex = frame.get("hex").asText();

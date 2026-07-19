@@ -177,6 +177,12 @@ active.
 - **Live end-to-end check before the gate:** booted simulator, observed 
   TM(3,25) on the WebSocket once per wall-clock second (interactive 1:1 pacing) 
   at exact whole-second OBTs; SID 1 SID field and parameter values decoded correctly.
+- **CI catch after the gate PR:** SIM-TC-012 (`WebApiEndToEndTest`, runs under 
+  real 1:1 pacing) took the *first* TM frame off the WebSocket; on a slow CI 
+  runner the SID 1 heartbeat crossed the 1.0 s boundary ahead of the ping 
+  response (`expected 17 but was 3`). Fixed in the verdict-record PR by 
+  selecting the first ST[17] TM frame — the SIM-TC-012 criterion constrains 
+  the TM(17,2) frame, not the surrounding stream.
 
 ## Open Items / Proposals
 
