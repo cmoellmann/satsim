@@ -28,11 +28,11 @@ web API are unchanged; encoding still round-trips `POST /api/tc/preview`.
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| Structured compose of the V-TC-03/04/05 field values reproduces the vectors byte-identically in the preview (SIM-TC-034) | PENDING (manual) | Verdict to be recorded in §"Manual Test Verdicts" below. Supporting evidence: automated live check at the baseline — the generated application data for the SVS field values previews byte-identical to V-TC-03/04/05 at sequence counts 0/1/2 via `POST /api/tc/preview`. |
-| Interpreted TC detail incl. layout-mismatch handling verified (SIM-TC-035) | PENDING (manual) | Verdict to be recorded below. |
-| Inline failure code verified (SIM-TC-036) | PENDING (manual) | Verdict to be recorded below. |
+| Structured compose of the V-TC-03/04/05 field values reproduces the vectors byte-identically in the preview (SIM-TC-034) | PASS | Verdict recorded in §"Manual Test Verdicts" below: pass, 2026-07-19, C. Möllmann. Supporting evidence: automated live check at the baseline — the generated application data for the SVS field values previews byte-identical to V-TC-03/04/05 at sequence counts 0/1/2 via `POST /api/tc/preview`. |
+| Interpreted TC detail incl. layout-mismatch handling verified (SIM-TC-035) | PASS | Verdict recorded below: pass, 2026-07-19, C. Möllmann. |
+| Inline failure code verified (SIM-TC-036) | PASS | Verdict recorded below: pass, 2026-07-19, C. Möllmann. |
 | Existing frontend smoke cases unaffected | PASS | No SVS criterion amended; ping, raw injection, TM(3,25)/ST[1] detail and log-control paths unchanged (regression-checked live at the baseline); full automated suite green. |
-| SRS M1c-scope requirements all traced+passed | PENDING (manual) | Traceability matrix below; TraceabilityCheck M1c gate: 0 findings → OK. UI-011..013 are M-verified — passed follows from the three manual verdicts. |
+| SRS M1c-scope requirements all traced+passed | PASS | Traceability matrix below; TraceabilityCheck M1c gate: 0 findings → OK. UI-011..013 are M-verified; all three manual verdicts pass. |
 
 Per the M1b precedent, the gate record closes with the commit that records
 the manual verdicts; the `M1c` tag is proposed on that merge commit.
@@ -110,9 +110,9 @@ Per SDP §2.1 tailoring, pus-core is the correctness-critical core (packet layer
 
 | Req ID | Title | Ver. | Scope | SVS Case(s) | Test Method(s) | Verdict |
 |---|---|---|---|---|---|---|
-| SIM-REQ-UI-011 | Structured HK compose fields generating ICD §9.2/§9.3 application data; free hex retained elsewhere | M | M1c | SIM-TC-034 | Manual checklist (frontend) | PENDING |
-| SIM-REQ-UI-012 | Interpreted ST[3] TC application data in the packet-log detail view; layout mismatches marked | M | M1c | SIM-TC-035 | Manual checklist (frontend) | PENDING |
-| SIM-REQ-UI-013 | Inline ICD §10.4 failure-code name on TM(1,2)/(1,8) log rows | M | M1c | SIM-TC-036 | Manual checklist (frontend) | PENDING |
+| SIM-REQ-UI-011 | Structured HK compose fields generating ICD §9.2/§9.3 application data; free hex retained elsewhere | M | M1c | SIM-TC-034 | Manual checklist (frontend) | PASS |
+| SIM-REQ-UI-012 | Interpreted ST[3] TC application data in the packet-log detail view; layout mismatches marked | M | M1c | SIM-TC-035 | Manual checklist (frontend) | PASS |
+| SIM-REQ-UI-013 | Inline ICD §10.4 failure-code name on TM(1,2)/(1,8) log rows | M | M1c | SIM-TC-036 | Manual checklist (frontend) | PASS |
 
 Preceding-milestone requirements remain in scope and passing; their gate records
 are the [M0 report](M0-report.md), [M1 report](M1-report.md),
@@ -129,10 +129,10 @@ Source: `java -cp sim-test-support/target/classes org.satsim.testsupport.trace.T
 
 ## Manual Test Verdicts
 
-To be executed against the running simulator (http://localhost:8090) at the
-baseline commit; verdicts recorded here by the project lead.
+Executed against the running simulator (http://localhost:8090) at the
+baseline commit.
 
-### SIM-TC-034 (structured HK compose) — verdict pending
+### SIM-TC-034 (structured HK compose) — pass, 2026-07-19, C. Möllmann
 
 Checklist per SVS: fresh simulator, all ack flags cleared; selecting TC(3,1)
 replaces the free application-data field with SID/interval/parameter inputs;
@@ -143,7 +143,7 @@ consumed sequence counts; selecting a custom type or subtype restores free hex
 entry; a semantically invalid structured compose (interval 50 ms) is sendable
 and yields TM(1,8) ILLEGAL_COLLECTION_INTERVAL. Verifies: SIM-REQ-UI-011.
 
-### SIM-TC-035 (interpreted ST[3] TC detail) — verdict pending
+### SIM-TC-035 (interpreted ST[3] TC detail) — pass, 2026-07-19, C. Möllmann
 
 Checklist per SVS: expanding the three TC rows sent in SIM-TC-034 shows named
 application-data fields (TC(3,1): SID 2, interval 5000 ms, parameters
@@ -152,7 +152,7 @@ the custom free-entry path with truncated application data (e.g. `00 02`)
 shows a layout-mismatch note with raw hex instead of misdecoded fields.
 Verifies: SIM-REQ-UI-012.
 
-### SIM-TC-036 (inline failure code) — verdict pending
+### SIM-TC-036 (inline failure code) — pass, 2026-07-19, C. Möllmann
 
 Checklist per SVS: the TM(1,8) row provoked in SIM-TC-034 (interval 50 ms)
 shows the failure-code name ILLEGAL_COLLECTION_INTERVAL in the log row itself,
@@ -199,10 +199,10 @@ gate remains active.
 | Item | Status | Evidence |
 |---|---|---|
 | Build + CI green | PASS | `./mvnw verify` green at baseline commit; CI green on merged PRs #49/#50. |
-| In-scope SVS cases implemented and passing | PENDING | SIM-TC-034/035/036 are manual; verdicts to be recorded above. No M2 scope pulled in. |
+| In-scope SVS cases implemented and passing | PASS | SIM-TC-034/035/036 manual pass (2026-07-19, C. Möllmann). No M2 scope pulled in. |
 | Test report + traceability matrix generated | PASS | This document (M1c-report.md). Traceability matrix above. |
 | CI gate milestone raised to M1c | PASS | `.github/workflows/ci.yml` runs TraceabilityCheck `--milestone M1c --gate` (this PR). |
-| Milestone tag proposed | PENDING | Tag `M1c` to be proposed on the merge commit of the verdict record (the gate-closing commit), per M1b precedent. |
+| Milestone tag proposed | PASS | Tag `M1c` proposed on the merge commit of this verdict record (the gate-closing commit), per M1b precedent; the pushed tag is its own evidence. |
 
 ---
 
