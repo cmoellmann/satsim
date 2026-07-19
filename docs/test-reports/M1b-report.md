@@ -30,7 +30,7 @@ ST[3] semantic errors yield TM(1,8) completion failure reports.
 | Periodic emission at correct simulated times verified | PASS | SIM-TC-019: fresh start, no TC traffic — reports at T=1.0/2.0 s matching V-TM-03/04 byte-identically. |
 | HK structure lifecycle (create/enable/disable) verified | PASS | SIM-TC-020: V-TC-03 creates SID 2 disabled, V-TC-04 enables with 5.0 s interval, V-TC-05 disables; SID 1 unaffected throughout. |
 | Determinism replay green incl. HK stream | PASS | SIM-TC-011: scripted scenario with 12 SID 1 reports (T=1..12 s) + 2 SID 2 reports (T=7,12 s) yields 573-octet stream; two runs SHA-256-identical. |
-| Frontend smoke test shows periodic HK | PENDING | SIM-TC-021 verdict to be recorded before gate closure. |
+| Frontend smoke test shows periodic HK | PASS | SIM-TC-021 verdict recorded in §"Manual Test Verdicts" below: pass, 2026-07-19, C. Möllmann. |
 | SRS M1b-scope requirements all traced+passed | PASS | Traceability matrix below; TraceabilityCheck M1b gate: 0 findings → OK. |
 
 ## Test Results Summary
@@ -142,12 +142,12 @@ Source: `java -cp sim-test-support/target/classes org.satsim.testsupport.trace.T
 Executed against the running simulator (http://localhost:8090) at the
 baseline commit.
 
-### SIM-TC-021 (periodic HK visible) — PENDING — verdict to be recorded before gate closure
+### SIM-TC-021 (periodic HK visible) — pass, 2026-07-19, C. Möllmann
 
 Checklist per SVS: open frontend on a freshly started simulator; without sending 
 any TC, TM(3,25) entries appear about once per second (interactive 1:1 pacing) 
 with decoded SID and parameter values; HK-P003 value changes between reports. 
-Verdict + date + name to be recorded by project lead before gate approval.
+Verifies: SIM-REQ-HK-003 (manual half).
 
 ## Review Verdicts
 
@@ -177,6 +177,12 @@ active.
 - **Live end-to-end check before the gate:** booted simulator, observed 
   TM(3,25) on the WebSocket once per wall-clock second (interactive 1:1 pacing) 
   at exact whole-second OBTs; SID 1 SID field and parameter values decoded correctly.
+- **CI catch after the gate PR:** SIM-TC-012 (`WebApiEndToEndTest`, runs under 
+  real 1:1 pacing) took the *first* TM frame off the WebSocket; on a slow CI 
+  runner the SID 1 heartbeat crossed the 1.0 s boundary ahead of the ping 
+  response (`expected 17 but was 3`). Fixed in the verdict-record PR by 
+  selecting the first ST[17] TM frame — the SIM-TC-012 criterion constrains 
+  the TM(17,2) frame, not the surrounding stream.
 
 ## Open Items / Proposals
 
@@ -189,10 +195,10 @@ active.
 | Item | Status | Evidence |
 |---|---|---|
 | Build + CI green | PASS | `./mvnw verify` green at baseline commit; CI green on all merged PRs (#42–#46). |
-| In-scope SVS cases implemented and passing | PASS | SIM-TC-018/019/020 automated PASS; SIM-TC-033 automated PASS (OP-3 semantic errors); SIM-TC-021 manual verdict PENDING. No M2 scope pulled in. |
+| In-scope SVS cases implemented and passing | PASS | SIM-TC-018/019/020 automated PASS; SIM-TC-033 automated PASS (OP-3 semantic errors); SIM-TC-021 manual pass (2026-07-19, C. Möllmann). No M2 scope pulled in. |
 | Test report + traceability matrix generated | PASS | This document (M1b-report.md). Traceability matrix above. |
 | CI gate milestone raised to M1b | PASS | `.github/workflows/ci.yml` runs TraceabilityCheck `--milestone M1b --gate` (this PR). |
-| Milestone tag proposed | PENDING | Tag `M1b` to be created on the merge commit of this report's PR upon approval. |
+| Milestone tag proposed | PASS | Tag `M1b` proposed on the merge commit of this verdict record (the gate-closing commit); the pushed tag is its own evidence. |
 
 ---
 
