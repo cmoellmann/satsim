@@ -9,6 +9,7 @@ import java.util.HexFormat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.satsim.pus.PacketDecodeException;
+import org.satsim.pus.tc.TcPacket;
 import org.satsim.pus.tm.TmPacket;
 import org.satsim.sim.obsw.LoopbackTarget;
 import org.satsim.sim.obsw.PusSimulatedObsw;
@@ -76,7 +77,7 @@ class PusChainTest {
   void validPingYieldsExactlyOneConnectionTestReport() throws PacketDecodeException {
     Chain chain = Chain.start();
     chain.inject(V_TC_01);
-    chain.scheduler().advanceBy(1_000_000_000L);
+    chain.scheduler().advanceBy(500_000_000L);
 
     assertEquals(1, chain.tms().size());
     assertArrayEquals(V_TM_01, chain.tms().get(0));
@@ -96,7 +97,7 @@ class PusChainTest {
   void crcFailureIsRejectedWithoutTm() {
     Chain chain = Chain.start();
     chain.inject(V_NEG_01);
-    chain.scheduler().advanceBy(1_000_000_000L);
+    chain.scheduler().advanceBy(500_000_000L);
 
     assertEquals(0, chain.tms().size());
     assertEquals(1, chain.obsw().rejections().size());
@@ -115,7 +116,7 @@ class PusChainTest {
   void pusVersionRejectionYieldsNoServiceTm() throws PacketDecodeException {
     Chain chain = Chain.start();
     chain.inject(V_NEG_02);
-    chain.scheduler().advanceBy(1_000_000_000L);
+    chain.scheduler().advanceBy(500_000_000L);
 
     assertEquals(1, chain.tms().size());
     TmPacket tm = TmPacket.decode(chain.tms().get(0));
@@ -138,7 +139,7 @@ class PusChainTest {
   void ackFlagsDriveVerificationReportSequence() throws PacketDecodeException {
     Chain chain = Chain.start();
     chain.inject(V_TC_06);
-    chain.scheduler().advanceBy(1_000_000_000L);
+    chain.scheduler().advanceBy(500_000_000L);
 
     assertEquals(3, chain.tms().size());
     assertArrayEquals(V_TM_05, chain.tms().get(0));
@@ -147,7 +148,7 @@ class PusChainTest {
 
     Chain noAck = Chain.start();
     noAck.inject(V_TC_01);
-    noAck.scheduler().advanceBy(1_000_000_000L);
+    noAck.scheduler().advanceBy(500_000_000L);
 
     assertEquals(1, noAck.tms().size());
     assertArrayEquals(V_TM_01, noAck.tms().get(0));
@@ -167,7 +168,7 @@ class PusChainTest {
   void acceptanceFailureYieldsFailureReport() {
     Chain chain = Chain.start();
     chain.inject(V_NEG_02);
-    chain.scheduler().advanceBy(1_000_000_000L);
+    chain.scheduler().advanceBy(500_000_000L);
 
     assertEquals(1, chain.tms().size());
     assertArrayEquals(V_TM_08, chain.tms().get(0));
@@ -224,13 +225,19 @@ class PusChainTest {
   // Untraced unit tests (engineering hygiene, SDP §5).
 
   @Test
-  void secondPingAtOnePointFiveSecondsReproducesVectorTm02() {
+  void secondPingAtOnePointFiveSecondsReproducesVectorTm02() throws PacketDecodeException {
     // V-TC-02 is not used for the second ping for the same reason as in
     // countersIncrementAndWrap above: its ack=0b1111 would insert a TM(1,1)
     // ahead of the TM(17,2) from M1a, shifting its sequence count away from
     // the seq count=1 that V-TM-02 requires. V-TC-01 (ack=0b0000) is
-    // re-injected instead.
+    // re-injected instead. From M1b the default SID 1 housekeeping report at
+    // T=1.0 s would equally consume seq count 1, so periodic generation is
+    // disabled first via TC(3,7) — ack=0b0000, no TM, no counter effect.
     Chain chain = Chain.start();
+    byte[] disableSid1 = TcPacket.of(100, 0,
+        new org.satsim.pus.tc.TcSecondaryHeader(2, 0b0000, 3, 7, 0),
+        new org.satsim.pus.st3.HkSidList(java.util.List.of(1)).encode()).encode();
+    chain.inject(disableSid1);
     chain.inject(V_TC_01);
     chain.scheduler().advanceTo(1_500_000_000L);
     chain.inject(V_TC_01);
@@ -244,9 +251,11 @@ class PusChainTest {
   @Test
   void unimplementedServiceIsRejectedObservably() throws PacketDecodeException {
     Chain chain = Chain.start();
-    // Structurally valid TC(3,1)-style packet is not implemented in M1.
-    byte[] tc31 = HEX.parseHex("18 64 C0 00 00 12 20 03 01 00 00 00 02 00 00 13 88 00 02 00 01 00 03 8D CE");
-    chain.inject(tc31);
+    // TC(2,1): structurally valid, service outside the tailored set (never
+    // implemented — the SIM-TC-029 stimulus; TC(3,1) is implemented from M1b).
+    byte[] tc21 = TcPacket.of(100, 0,
+        new org.satsim.pus.tc.TcSecondaryHeader(2, 0b0000, 2, 1, 0), new byte[0]).encode();
+    chain.inject(tc21);
     chain.scheduler().advanceBy(1_000_000L);
 
     assertEquals(1, chain.tms().size());
@@ -268,6 +277,8 @@ class PusChainTest {
     assertEquals(250_000_000L, chain.scheduler().clock().nanos());
     chain.scheduler().advanceTo(1_500_000_000L);
     assertEquals(1_500_000_000L, chain.scheduler().clock().nanos());
-    assertTrue(chain.tms().isEmpty());
+    // From M1b the advance past T=1.0 s emits the default SID 1 HK report —
+    // the clock boundary invariant is unaffected by the mid-advance event stop.
+    assertEquals(1, chain.tms().size());
   }
 }
