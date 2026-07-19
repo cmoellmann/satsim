@@ -20,3 +20,4 @@ cross-reference each other.
 | SPR-001 | Frontend log can show response TM rows as preceding the TC that caused them | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | proposed: fix (sorted insertion + SCR-006 for SRS/SVS) |
 | SPR-002 | Failure code embedded in the type column impairs log readability | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | proposed: reject as-designed → convert to SCR (dedicated column) |
 | SPR-003 | Compose form shows all structured HK fields for every type/subtype selection | Analyzed | minor | 2026-07-19 | simulator frontend (`style.css` compose form) | proposed: fix (`[hidden]` CSS guard); SIM-TC-034 re-run at closure (verification-escape note) |
+| SPR-004 | Type dropdown lists ST[17] before ST[3] instead of numeric order | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` compose dropdowns) | proposed: reject (baseline silent) → convert to SCR (numeric sort) |
