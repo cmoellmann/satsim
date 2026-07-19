@@ -75,7 +75,7 @@ flowchart LR
   SVC -- "broadcast(TM)" --> WSH
   SCHED -- "owns/advances" --> CLK
   SCHED -- "sendTc / grant(budget)" --> TGT
-  TGT -- "handleTc(tc, now)" --> APP
+  TGT -- "handleTc / handleTimeEvent (now)" --> APP
   APP -- "encode/decode" --> CODEC
   SVC -- "encode/decode" --> CODEC
 ```
@@ -287,6 +287,8 @@ classDiagram
   class SimulatedObsw {
     <<interface>>
     handleTc(tcPacket, nowNanos)
+    nextEventNanos()
+    handleTimeEvent(nowNanos)
   }
   class LoopbackTarget {
     pendingTcs : queue
@@ -302,14 +304,14 @@ classDiagram
   SpaceLink <|-- ObswTarget
   ObswTarget <|.. LoopbackTarget
   SimulatedObsw <|.. PusSimulatedObsw
-  LoopbackTarget --> SimulatedObsw : due TCs at due time
+  LoopbackTarget --> SimulatedObsw : due TCs + time events at due time
 ```
 
 | Class | Responsibility | Notes |
 |---|---|---|
 | `ObswTarget` | = `EmulatorControl` + `SpaceLink`. The full plug-in contract for a spacecraft-side execution environment | ADRs call this an "execution back-end" — same concept, wording frozen by ADR immutability |
-| `LoopbackTarget` | In-process reference target (ADR-0006 C5): queues incoming TCs with a fixed processing delay, maintains **slave-local time** that only advances inside `grant()`, hands due TCs to the simulated OBSW, emits resulting TM | Exercises the real grant/consume protocol from the first increment [SIM-REQ-LINK-001] — an event due exactly at the budget boundary takes precedence over budget exhaustion. TM emitted before a consumer registers is buffered, then flushed on `onTm` |
-| `SimulatedObsw` | The OBSW seam *inside* a Java-hosted target: one TC in (at an explicit simulated time), zero or more TM out | Pure with respect to time — "now" is a parameter, never pulled from a clock. This is what M3+ replaces with real OBSW behind a process boundary |
+| `LoopbackTarget` | In-process reference target (ADR-0006 C5): queues incoming TCs with a fixed processing delay, maintains **slave-local time** that only advances inside `grant()`, hands due TCs *and due OBSW time events* to the simulated OBSW, emits resulting TM | Exercises the real grant/consume protocol from the first increment [SIM-REQ-LINK-001] — the grant window ends at the earliest of next-TC-due and next-event-due; an event due exactly at the budget boundary takes precedence over budget exhaustion; at a shared instant the time event is handled before the TC. Enforces that `handleTimeEvent` strictly advances `nextEventNanos` (progress guarantee). TM emitted before a consumer registers is buffered, then flushed on `onTm` |
+| `SimulatedObsw` | The OBSW seam *inside* a Java-hosted target: one TC in (at an explicit simulated time), zero or more TM out; from M1b additionally a pull-based time-event pair — `nextEventNanos()` announces the next autonomous work instant (periodic housekeeping, ICD §9.6), `handleTimeEvent(now)` performs all work due at it [SIM-REQ-HK-002] | Pure with respect to time — "now" is a parameter, never pulled from a clock. This is what M3+ replaces with real OBSW behind a process boundary (an external target schedules its own periodic activity; the pair exists only on the Java-hosted seam) |
 | `PusSimulatedObsw` | The PUS-C protocol brain [SIM-REQ-PUS-008, -010]: acceptance checks in ICD §10.2 order (structure/CRC → PUS version → service/subtype), then service dispatch. M1 service set: TC(17,1) → one TM(17,2) | Owns the spacecraft-side counters [SIM-REQ-PUS-009]: TM sequence count per APID (wrap 16383), message type counter per (service, subtype) (wrap 65535). Rejected TCs are discarded without TM in M1 but recorded on an observable `rejections()` list + log, and pushed to the single `onRejection` listener (feeds the ICD §8.2 rejection frames, SCR-003) [SIM-REQ-PUS-005, -006, SIM-REQ-UI-007]; ST[1] failure reports take over in M1a |
 
 #### 3.2.4 `web` — REST/WebSocket API and the thread bridge
@@ -488,7 +490,7 @@ strictly outside the simulation core.
 | Milestone | Change | Where it lands |
 |---|---|---|
 | M1a (SCR-002) | ST[1] verification reports | `PusSimulatedObsw`: rejection paths gain TM(1,2)/(1,8) emission; accepted TC(17,1) gains TM(1,1)/(1,7) per ack flags. Frontend default ack becomes 0b1001 |
-| M1b (SCR-001) | ST[3] housekeeping, periodic TM(3,25) | First *time-triggered* (not TC-triggered) TM. `SimulatedObsw`'s TC-only contract will need a deliberate extension (e.g. a time-advance hook invoked from the target's grant path) — design decision to take at M1b start |
+| M1b (SCR-001) | ST[3] housekeeping, periodic TM(3,25) | First *time-triggered* (not TC-triggered) TM. Decision taken at M1b start: `SimulatedObsw` gained the pull-based `nextEventNanos()`/`handleTimeEvent(now)` pair (§3.2.3); the target stops grant windows at event due times. The ST[3] service logic itself lands in `PusSimulatedObsw` |
 | M2 | TCP length-framed space-packet link (ICD §8) | New `SpaceLink` implementation on the ground side; Yamcs-ready per ADR-0005 |
 | M3 | Native OBSW process target | New `ObswTarget` implementation: process lifecycle + IPC adapter speaking `EmulatorControl` grants and `SpaceLink` packets across the process boundary (ADR-0001) |
 | M5+ | Emulator targets (TSIM/TEMU/QEMU) | Same seam; grants map to instruction budgets, links map to device models |

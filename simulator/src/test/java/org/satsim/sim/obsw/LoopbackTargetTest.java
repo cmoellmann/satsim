@@ -143,6 +143,126 @@ class LoopbackTargetTest {
     assertThrows(IllegalArgumentException.class, () -> target.grant(-1));
   }
 
+  /** Periodic fake OBSW: one single-byte marker TM per interval, payload = report index. */
+  private static final class PeriodicObsw implements SimulatedObsw {
+    private final long intervalNanos;
+    private long nextDue;
+    private byte reportIndex;
+
+    PeriodicObsw(long intervalNanos) {
+      this.intervalNanos = intervalNanos;
+      this.nextDue = intervalNanos;
+    }
+
+    @Override
+    public List<byte[]> handleTc(byte[] tcPacket, long nowNanos) {
+      return List.of(new byte[] {'T', tcPacket[0]});
+    }
+
+    @Override
+    public long nextEventNanos() {
+      return nextDue;
+    }
+
+    @Override
+    public List<byte[]> handleTimeEvent(long nowNanos) {
+      nextDue = nowNanos + intervalNanos;
+      return List.of(new byte[] {'E', reportIndex++});
+    }
+  }
+
+  @Test
+  void grantStopsAtTimeEventAndEmitsAtExactInstant() {
+    LoopbackTarget target = new LoopbackTarget(PROCESSING, new PeriodicObsw(1_000_000L));
+    target.initialize();
+    List<byte[]> tms = new ArrayList<>();
+    target.onTm(tms::add);
+
+    Consumed first = target.grant(10_000_000L);
+    assertEquals(1_000_000L, first.nanosConsumed());
+    assertEquals(StopReason.EVENT_PENDING, first.reason());
+    assertEquals(1, tms.size());
+    assertArrayEquals(new byte[] {'E', 0}, tms.get(0));
+
+    Consumed second = target.grant(10_000_000L);
+    assertEquals(1_000_000L, second.nanosConsumed());
+    assertEquals(StopReason.EVENT_PENDING, second.reason());
+    assertArrayEquals(new byte[] {'E', 1}, tms.get(1));
+  }
+
+  @Test
+  void timeEventBeyondBudgetIsNotEmittedEarly() {
+    LoopbackTarget target = new LoopbackTarget(PROCESSING, new PeriodicObsw(1_000_000L));
+    target.initialize();
+    List<byte[]> tms = new ArrayList<>();
+    target.onTm(tms::add);
+
+    Consumed partial = target.grant(400_000L);
+    assertEquals(400_000L, partial.nanosConsumed());
+    assertEquals(StopReason.BUDGET_EXHAUSTED, partial.reason());
+    assertEquals(0, tms.size());
+
+    // Event due exactly at the budget boundary takes precedence over exhaustion.
+    Consumed boundary = target.grant(600_000L);
+    assertEquals(600_000L, boundary.nanosConsumed());
+    assertEquals(StopReason.EVENT_PENDING, boundary.reason());
+    assertEquals(1, tms.size());
+  }
+
+  @Test
+  void timeEventBeforeTcDueTimeIsHandledFirstAcrossGrants() {
+    // TC due at 1.5 ms (sent at 0.5 ms + 1 ms processing), events at 1 ms and 2 ms.
+    LoopbackTarget target = new LoopbackTarget(PROCESSING, new PeriodicObsw(1_000_000L));
+    target.initialize();
+    List<byte[]> tms = new ArrayList<>();
+    target.onTm(tms::add);
+
+    target.grant(500_000L);
+    target.sendTc(new byte[] {7});
+    assertEquals(500_000L, target.grant(10_000_000L).nanosConsumed()); // event at 1 ms
+    assertEquals(500_000L, target.grant(10_000_000L).nanosConsumed()); // TC at 1.5 ms
+    assertEquals(500_000L, target.grant(10_000_000L).nanosConsumed()); // event at 2 ms
+    assertEquals(3, tms.size());
+    assertArrayEquals(new byte[] {'E', 0}, tms.get(0));
+    assertArrayEquals(new byte[] {'T', 7}, tms.get(1));
+    assertArrayEquals(new byte[] {'E', 1}, tms.get(2));
+  }
+
+  @Test
+  void timeEventAndTcAtSameInstantEmitEventTmFirst() {
+    // TC sent at T=0 with 1 ms processing is due exactly at the 1 ms event.
+    LoopbackTarget target = new LoopbackTarget(PROCESSING, new PeriodicObsw(1_000_000L));
+    target.initialize();
+    List<byte[]> tms = new ArrayList<>();
+    target.onTm(tms::add);
+
+    target.sendTc(new byte[] {9});
+    Consumed consumed = target.grant(10_000_000L);
+    assertEquals(1_000_000L, consumed.nanosConsumed());
+    assertEquals(StopReason.EVENT_PENDING, consumed.reason());
+    assertEquals(2, tms.size());
+    assertArrayEquals(new byte[] {'E', 0}, tms.get(0));
+    assertArrayEquals(new byte[] {'T', 9}, tms.get(1));
+  }
+
+  @Test
+  void timeEventNotAdvancingNextEventIsRejected() {
+    SimulatedObsw stuck = new SimulatedObsw() {
+      @Override
+      public List<byte[]> handleTc(byte[] tcPacket, long nowNanos) {
+        return List.of();
+      }
+
+      @Override
+      public long nextEventNanos() {
+        return 1_000L;
+      }
+    };
+    LoopbackTarget target = new LoopbackTarget(PROCESSING, stuck);
+    target.initialize();
+    assertThrows(IllegalStateException.class, () -> target.grant(10_000L));
+  }
+
   @Test
   void zeroProcessingDelayEmitsTmAtTcArrivalTime() {
     LoopbackTarget target = new LoopbackTarget(0, ECHO);
