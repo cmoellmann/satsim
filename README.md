@@ -4,8 +4,10 @@
 
 A satellite simulator with a byte-exact ECSS PUS-C TM/TC interface and a live
 web console, for developing and automatically testing satellite on-board
-software (OBSW). Built AI-assisted under a tailored ECSS-E-ST-40C/Q-ST-80C
-process — with documented, machine-enforced human controls.
+software (OBSW). Created **from scratch with AI** (Claude / Claude Code)
+under — and enforcing — the ECSS software development standards
+(ECSS-E-ST-40C, ECSS-Q-ST-80C, tailored): a proof of concept of how
+AI-assisted development and space-grade process discipline work together.
 
 ![SatSim console — live OBT clock, TC(17,1) ping answered by TM(1,1) acceptance, TM(17,2) report, and TM(1,7) completion](docs/assets/console.png)
 
@@ -15,62 +17,43 @@ field-level breakdown down to the CRC.*
 
 ## What SatSim is
 
-SatSim is two experiments in one repository. The **engineering experiment**:
-a simulator that speaks strict PUS-C (ECSS-E-ST-70-41C) over CCSDS space
-packets, built with the same discipline applied to real flight software — a
-tailored ECSS process, a byte-level ICD with authoritative reference vectors,
-spec-first validation, full requirement-to-test traceability, and
-deterministic replay. The **methodology experiment**: the project is
-deliberately AI-assisted (Claude / Claude Code) under explicit controls — AI
-proposes, the human decides; reference vectors and expected test results are
-human-approved and *immutable to the AI*; everything enters the baseline via
-reviewed PR. Several of the safeguards, including the immutability rule
-itself, originated as AI proposals that the human evaluated and approved.
-The question behind both: can one engineer with 15 years of onboard-software
-experience use AI-assisted development to produce flight-software-grade
-engineering at a fraction of the traditional effort — *without* sacrificing
-the integrity that makes it flight-grade? This repository is the running
-answer.
+SatSim is two experiments in one repository:
+
+- **The engineering experiment** — a simulator that speaks strict PUS-C
+  (ECSS-E-ST-70-41C) over CCSDS space packets, built with flight-software
+  discipline: a tailored ECSS process, a byte-level ICD with authoritative
+  reference vectors, spec-first validation, full requirement-to-test
+  traceability, and deterministic replay.
+- **The methodology experiment** — the development is deliberately
+  AI-assisted, under explicit controls: AI proposes, the human decides;
+  reference vectors and expected test results are human-approved and
+  *immutable to the AI*; everything enters the baseline via reviewed PR.
+  Several of the safeguards, including the immutability rule itself,
+  originated as AI proposals that were evaluated and approved by the human.
 
 What the PoC covers today:
 
+- **ECSS compliance as a working practice, not paperwork**: the full
+  controlled document set (SDP, SRS, SVS, ICD, SDD, ADRs, SCRs, SRF,
+  milestone gate reports) exists and is *live* — machine-parsed by CI,
+  gated at milestones, or both.
+- **A documented AI development approach**: tiered AI staffing under
+  committed agent definitions — cheaper models implement well-specified
+  chunks with bounded authority, the senior model reviews every delegated
+  diff, the human merges.
 - **PUS-C over CCSDS space packets**, strictly tailored: ST[17] connection
   test and the ST[1] request verification subset live; ST[3] housekeeping
   specified and next (M1b). Single APID, CUC 4+2 on-board time.
-- **Deterministic simulated time** — the scheduler is the sole time master
-  (ADR-0006); wall-clock access in simulation logic is banned *by the build*.
-  Identical scripted runs produce SHA-256-identical TM streams, timestamps
-  included.
+- **A thin web console**: running OBT clock, live packet log with rejection
+  rows and field-level detail view, compose form whose hex preview *is* the
+  ICD reference vector.
 - **Process-isolated OBSW targets** behind two narrow contracts
   (`SpaceLink`, `EmulatorControl`): the entire validation suite must pass
   unchanged against any conforming target — a conformance kit for
   progressively more real spacecraft software.
-- **A thin web console**: running OBT clock, live packet log with rejection
-  rows and field-level detail view, compose form whose hex preview *is* the
-  ICD reference vector.
-- **A live ECSS document set**: requirements and test cases machine-parsed
-  by CI, ICD vectors immutable, milestone gates recorded as auditable
-  reports.
-- **Tiered AI staffing** under committed agent definitions: cheaper models
-  implement well-specified chunks, the senior model reviews, the human
-  merges.
 
-## Architecture
-
-```mermaid
-flowchart LR
-    B["Browser console"] -- "REST /api/tc" --> S["SimulationService"]
-    S -- "WS /api/tm (tm / time / rejection frames)" --> B
-    S --> SCH["SimulationScheduler<br/>(time master)"]
-    SCH -- "grant(budget) / consumed(time, reason)" --> T["LoopbackTarget<br/>(OBSW target)"]
-    T --> O["PusSimulatedObsw<br/>(ST17, ST1)"]
-    O -.-> P["pus-core<br/>(CCSDS/PUS-C codecs, JDK-only)"]
-    S -.-> P
-```
-
-The scheduler *grants* time budgets to the OBSW target and the target reports
-back what it *consumed* (ADR-0006) — simulated time never runs ahead of its
-master, which is what makes byte-identical replay possible.
+The as-built architecture — modules, threads, and key flows down to class
+level — is described in the [Software Design Document](docs/sdd.md).
 
 ## Highlights
 
@@ -129,29 +112,6 @@ before the user sends anything.
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 
-## Getting started
-
-Build: `./mvnw -q verify` (Java 21; Maven 3.9.11 via committed wrapper — no
-network resources required at test time).
-
-Run the simulator:
-
-```
-./mvnw -q package
-java -jar simulator/target/simulator-0.1.0-SNAPSHOT.jar
-```
-
-then open http://localhost:8090 — compose a TC(17,1) ping (the hex preview
-shows the exact ICD vector), send it, and watch TM(1,1), TM(17,2), TM(1,7)
-arrive in the live log. REST/WebSocket API per [ICD §8](docs/icd.md):
-`POST /api/tc`, WS `/api/tm`.
-
-For a quick tour of the methodology, read
-[ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) for a sample of the
-decision process, [SDP §6](docs/sdp.md) for the AI-governance controls, and
-the [M0 report](docs/test-reports/M0-report.md) for what a milestone gate
-produces.
-
 ## Current limitations
 
 - **In-process loopback target only.** No real OBSW binary runs yet — the
@@ -175,7 +135,7 @@ produces.
 - **Coverage target on pus-core only** (SDP §2.1 tailoring); other modules
   are covered by validation tests without a numeric bar.
 
-## Roadmap
+## Roadmap & future extensions
 
 Planned increments per [SDP §4](docs/sdp.md), each behind a milestone gate:
 
@@ -193,9 +153,36 @@ Planned increments per [SDP §4](docs/sdp.md), each behind a milestone gate:
   proven.
 
 Ideas beyond the current plan — each would enter via SCR, not by quiet scope
-growth: further PUS services (ST[5] events, ST[11] time-tagged commands,
-ST[12] monitoring), fault injection on the space link, commercial emulators
-(TSIM, Terma TEMU/cOBC), multi-APID / multi-spacecraft scenarios.
+growth:
+
+- **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
+  commanding, ST[12] on-board monitoring.
+- **Fault injection** on the space link (drops, corruption, delays).
+- **Commercial instruction-level emulators**: TSIM, Terma TEMU/cOBC.
+- **Multi-APID / multi-spacecraft scenarios.**
+
+## Getting started
+
+Build: `./mvnw -q verify` (Java 21; Maven 3.9.11 via committed wrapper — no
+network resources required at test time).
+
+Run the simulator:
+
+```
+./mvnw -q package
+java -jar simulator/target/simulator-0.1.0-SNAPSHOT.jar
+```
+
+then open http://localhost:8090 — compose a TC(17,1) ping (the hex preview
+shows the exact ICD vector), send it, and watch TM(1,1), TM(17,2), TM(1,7)
+arrive in the live log. REST/WebSocket API per [ICD §8](docs/icd.md):
+`POST /api/tc`, WS `/api/tm`.
+
+For a quick tour of the methodology, read
+[ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) for a sample of the
+decision process, [SDP §6](docs/sdp.md) for the AI-governance controls, and
+the [M0 report](docs/test-reports/M0-report.md) for what a milestone gate
+produces.
 
 ---
 
