@@ -359,9 +359,22 @@ from the enriched ICD §8.1 response [SIM-REQ-UI-006]; a live packet log fed
 by the `/api/tm` WebSocket (frame kinds tm/time/rejection, automatic
 reconnect, capped at 200 rows) with kind/service filters, clear and pause
 buffering [SIM-REQ-UI-002, -007, -008]; a header OBT clock driven by time
-frames [SIM-REQ-UI-005]; and a click-to-expand field-level detail view per
-row plus click-to-copy hex cells [SIM-REQ-UI-009]. It trusts the backend for
-all encoding/decoding — no packet knowledge is duplicated in JavaScript.
+frames [SIM-REQ-UI-005]; a click-to-expand field-level detail view per row
+plus click-to-copy hex cells [SIM-REQ-UI-009]; structured HK compose fields
+(SID, collection interval, ICD §9.5 parameter selection for TC(3,1); SID
+list for TC(3,5)/(3,7)) that replace free hex entry for those subtypes and
+generate the application-data octets ground-side, with free hex entry
+(including the custom… escape) retained for everything else
+[SIM-REQ-UI-011]; interpreted ST[3] TC detail decoding those same
+application-data layouts into named fields, falling back to a raw-hex
+mismatch note when a custom compose does not match the ICD layout
+[SIM-REQ-UI-012]; and inline ICD §10.4 failure-code names on TM(1,2)/(1,8)
+log rows [SIM-REQ-UI-013]. Header/CRC/sequence-count encoding remains
+exclusively backend-side — the compose preview still round-trips through
+`POST /api/tc/preview` — but the frontend deliberately knows the ICD
+§9.2/§9.3/§9.5 application-data layouts for compose and display, as it
+already did for the §9.4/§10 TM interpretation; the space-link bytes
+themselves are still produced solely by the backend encoder.
 
 ## 4. Runtime view — threads and state ownership
 
@@ -479,7 +492,7 @@ strictly outside the simulation core.
 | `LoopbackTarget` | SIM-REQ-LINK-001, SIM-REQ-TIME-004 |
 | `SimulationScheduler` (+ clock) | SIM-REQ-TIME-003..005 |
 | `InteractivePacer` | SIM-REQ-TIME-001 (containment of wall clock) |
-| `web` package + frontend | SIM-REQ-UI-001..004 |
+| `web` package + frontend | SIM-REQ-UI-001..013 |
 | `sim-test-support` | SIM-REQ-QA-001..003 |
 
 (Authoritative per-test tracing lives in the generated traceability matrix,

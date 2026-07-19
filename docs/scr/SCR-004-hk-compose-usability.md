@@ -1,6 +1,6 @@
 # SCR-004 — Structured HK compose and interpreted TC display (new increment M1c)
 
-- Status: Proposed
+- Status: Implemented (spec level; implementation code follows in the M1c session)
 - Date: 2026-07-19
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-SRS, SATSIM-SVS
@@ -67,7 +67,8 @@ backend-encoded — the compose preview still round-trips through
 
 ## 4. Disposition
 
-- [ ] Approved — project lead (C. Möllmann), via review and merge of PR #49.
+- [x] Approved — project lead (C. Möllmann), 2026-07-19, via review and merge
+      of PR #49 (SCR + SDP + SRS + SVS in one specification PR).
 
 ## 5. Findings during implementation
 

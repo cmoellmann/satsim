@@ -187,8 +187,10 @@ java -jar simulator/target/simulator-0.1.0-SNAPSHOT.jar
 
 then open http://localhost:8090 — compose a TC(17,1) ping (the hex preview
 shows the exact ICD vector), send it, and watch TM(1,1), TM(17,2), TM(1,7)
-arrive in the live log. REST/WebSocket API per [ICD §8](docs/icd.md):
-`POST /api/tc`, WS `/api/tm`.
+arrive in the live log. Selecting TC(3,1) swaps the free hex field for
+structured SID/interval/parameter inputs, whose defaults reproduce the ICD
+reference vector V-TC-03 byte-for-byte in the preview. REST/WebSocket API
+per [ICD §8](docs/icd.md): `POST /api/tc`, WS `/api/tm`.
 
 For a quick tour of the methodology, read
 [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) for a sample of the

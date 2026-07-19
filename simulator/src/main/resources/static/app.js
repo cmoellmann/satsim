@@ -1,8 +1,9 @@
 "use strict";
 
-// SatSim frontend (SIM-REQ-UI-001/002/004..010): dropdown TC compose with
+// SatSim frontend (SIM-REQ-UI-001/002/004..013): dropdown TC compose with
 // live hex preview (ICD §8.1), live TM/time/rejection log from the /api/tm
-// WebSocket (ICD §8.2), OBT clock, log filters, packet detail view.
+// WebSocket (ICD §8.2), OBT clock, log filters, packet detail view,
+// structured ST[3] HK compose/decode and inline ST[1] failure codes.
 
 const $ = (id) => document.getElementById(id);
 const logBody = document.querySelector("#log tbody");
@@ -20,9 +21,9 @@ const TC_TYPES = [
     type: 3,
     name: "ST[3] Housekeeping",
     subtypes: [
-      { subtype: 1, name: "Create HK structure" },
-      { subtype: 5, name: "Enable periodic reports" },
-      { subtype: 7, name: "Disable periodic reports" },
+      { subtype: 1, name: "Create HK structure", fields: "hk-create" },
+      { subtype: 5, name: "Enable periodic reports", fields: "hk-sid-list" },
+      { subtype: 7, name: "Disable periodic reports", fields: "hk-sid-list" },
     ],
   },
 ];
@@ -67,6 +68,27 @@ function fillSubtypeSelect() {
 function syncCustomInputs() {
   $("type-custom").hidden = $("type-select").value !== CUSTOM;
   $("subtype-custom").hidden = $("subtype-select").value !== CUSTOM;
+  syncStructuredFields();
+}
+
+// Structured HK compose (SIM-REQ-UI-011): which field set applies to the
+// current type/subtype selection, or null for free hex entry. Custom
+// selections deliberately fall back to free hex entry — the escape hatch
+// for deliberately malformed ST[3] application data.
+function structuredKind() {
+  if ($("type-select").value === CUSTOM || $("subtype-select").value === CUSTOM) {
+    return null;
+  }
+  const entry = TC_TYPES.find((t) => String(t.type) === $("type-select").value);
+  const sub = entry?.subtypes.find((s) => String(s.subtype) === $("subtype-select").value);
+  return sub?.fields ?? null;
+}
+
+function syncStructuredFields() {
+  const kind = structuredKind();
+  $("hk-create-fields").hidden = kind !== "hk-create";
+  $("hk-sid-list-fields").hidden = kind !== "hk-sid-list";
+  $("app-data-row").hidden = kind !== null;
 }
 
 function selectedType() {
@@ -91,12 +113,54 @@ function ackFlags() {
   );
 }
 
+// Structured HK compose app-data generation (ICD §9.2/§9.3, SIM-REQ-UI-011).
+// Structural checks only (numeric, in bit range) — no semantic validation:
+// SID 0, interval < 100 ms, empty parameter/SID selections stay composable
+// so the TM(1,8) failure paths (ICD §9.1/§10.4) remain exercisable.
+function hex16(value) {
+  return value.toString(16).toUpperCase().padStart(4, "0");
+}
+
+function hex32(value) {
+  return value.toString(16).toUpperCase().padStart(8, "0");
+}
+
+function readUint(id, max, label) {
+  const value = Number($(id).value);
+  if (!Number.isInteger(value) || value < 0 || value > max) {
+    throw new Error(`${label} must be an integer between 0 and ${max}`);
+  }
+  return value;
+}
+
+function buildStructuredAppData(kind) {
+  if (kind === "hk-create") {
+    const sid = readUint("hk-sid", 65535, "SID");
+    const interval = readUint("hk-interval", 4294967295, "Collection interval");
+    const ids = [...document.querySelectorAll("#hk-params input[type=checkbox]")]
+        .filter((box) => box.checked)
+        .map((box) => Number(box.dataset.paramId));
+    return hex16(sid) + hex32(interval) + hex16(ids.length) + ids.map(hex16).join("");
+  }
+  // "hk-sid-list"
+  const tokens = $("hk-sids").value.split(/[\s,]+/).filter((token) => token !== "");
+  const sids = tokens.map((token) => {
+    const value = Number(token);
+    if (!Number.isInteger(value) || value < 0 || value > 65535) {
+      throw new Error(`SID "${token}" must be an integer between 0 and 65535`);
+    }
+    return value;
+  });
+  return hex16(sids.length) + sids.map(hex16).join("");
+}
+
 function composeBody() {
+  const kind = structuredKind();
   return {
     service: selectedType(),
     subtype: selectedSubtype(),
     ackFlags: ackFlags(),
-    appDataHex: $("app-data").value.trim(),
+    appDataHex: kind ? buildStructuredAppData(kind) : $("app-data").value.trim(),
   };
 }
 
@@ -280,6 +344,9 @@ function tcDetail(response) {
       ["Source ID", decoded.sourceId],
     ]]);
     groups.push(["Application data", [["Hex", decoded.appDataHex || "(empty)"]]]);
+    if (decoded.service === 3 && [1, 5, 7].includes(decoded.subtype)) {
+      groups.push(st3TcGroup(decoded));
+    }
   } else {
     groups.push(["Not decodable", [["First failed check (ICD §6.3)", response.decodeError]]]);
   }
@@ -301,6 +368,14 @@ const ST1_FAILURE_CODES = {
   8: "UNKNOWN_PARAMETER",
 };
 
+// ICD §9.5 parameter names, shared by the structured HK compose fields and
+// the interpreted ST[3] TC detail (SIM-REQ-UI-011/012).
+const HK_PARAMETER_NAMES = {
+  1: "HK-P001 TC accepted count",
+  2: "HK-P002 TM emitted count",
+  3: "HK-P003 battery voltage",
+};
+
 // TM frames carry no decoded appDataHex field; the app data is sliced out of
 // the raw packet hex instead (primary header 6 octets + TM secondary header
 // 13 octets, up to the trailing 2-octet CRC, ICD §2/§4/§7).
@@ -311,14 +386,27 @@ function tmAppDataHex(frame) {
   return start <= end ? raw.slice(start, end).toUpperCase() : "";
 }
 
+// ICD §10.4: the failure code is the trailing 4 hex chars of TM(1,2)/TM(1,8)
+// app data, present only once app data holds at least the request ID
+// (8 hex chars) plus the code itself (4 hex chars). Returns the code name,
+// "0x<hex4>" for a code not in ST1_FAILURE_CODES, or null if app data is too
+// short (SIM-REQ-UI-013).
+function st1FailureCode(frame) {
+  const appDataHex = tmAppDataHex(frame);
+  if (appDataHex.length < 12) {
+    return null;
+  }
+  const codeHex = appDataHex.slice(-4);
+  return ST1_FAILURE_CODES[parseInt(codeHex, 16)] ?? `0x${codeHex}`;
+}
+
 function st1VerificationGroup(frame, decoded) {
   const appDataHex = tmAppDataHex(frame);
   const rows = [["Request ID", appDataHex.slice(0, 8) || "(missing)"]];
   if (decoded.subtype === 2 || decoded.subtype === 8) {
-    const codeHex = appDataHex.slice(-4);
-    const code = parseInt(codeHex, 16);
-    const name = ST1_FAILURE_CODES[code];
-    rows.push(["Failure code", codeHex ? (name ? `0x${codeHex} ${name}` : `0x${codeHex}`) : "(missing)"]);
+    const code = st1FailureCode(frame);
+    const known = code !== null && !code.startsWith("0x");
+    rows.push(["Failure code", code === null ? "(missing)" : known ? `0x${appDataHex.slice(-4)} ${code}` : code]);
   }
   return ["ST[1] verification", rows];
 }
@@ -344,6 +432,54 @@ function st3HousekeepingGroup(frame) {
     rows.push(["Note", "structure layout ground-side unknown (defined by the TC(3,1) that created this SID, ICD §9.2)"]);
   }
   return ["ST[3] housekeeping report", rows];
+}
+
+// ICD §9.2/§9.3: decode ST[3] TC application data into named fields
+// (SIM-REQ-UI-012). Application data not matching the layout — e.g. a
+// custom free-hex compose used to inject deliberately malformed data — is
+// left as raw hex with a mismatch note instead of being misdecoded.
+function st3TcGroup(decoded) {
+  const hex = (decoded.appDataHex || "").replace(/\s/g, "").toUpperCase();
+  if (decoded.subtype === 1) {
+    if (hex.length >= 16) {
+      const sid = parseInt(hex.slice(0, 4), 16);
+      const interval = parseInt(hex.slice(4, 12), 16);
+      const n1 = parseInt(hex.slice(12, 16), 16);
+      if (hex.length === 16 + 4 * n1) {
+        const rows = [
+          ["SID", sid],
+          ["Collection interval", `${interval} ms`],
+          ["N1", n1],
+        ];
+        for (let i = 0; i < n1; i++) {
+          const idHex = hex.slice(16 + 4 * i, 20 + 4 * i);
+          const id = parseInt(idHex, 16);
+          rows.push([`Parameter ${i + 1}`, HK_PARAMETER_NAMES[id] ?? `0x${idHex} (unknown, ICD §9.5)`]);
+        }
+        return ["ST[3] request (ICD §9.2)", rows];
+      }
+    }
+    return ["ST[3] request (ICD §9.2)", [
+      ["Note", "application data does not match the ICD §9.2 layout"],
+      ["Hex", prettyHex(hex) || "(empty)"],
+    ]];
+  }
+  // subtypes 5/7 (ICD §9.3)
+  const n = hex.length >= 4 ? parseInt(hex.slice(0, 4), 16) : NaN;
+  if (hex.length >= 4 && hex.length === 4 + 4 * n) {
+    const sids = [];
+    for (let i = 0; i < n; i++) {
+      sids.push(parseInt(hex.slice(4 + 4 * i, 8 + 4 * i), 16));
+    }
+    return ["ST[3] request (ICD §9.3)", [
+      ["N", n],
+      ["SIDs", sids.join(", ")],
+    ]];
+  }
+  return ["ST[3] request (ICD §9.3)", [
+    ["Note", "application data does not match the ICD §9.3 layout"],
+    ["Hex", prettyHex(hex) || "(empty)"],
+  ]];
 }
 
 function tmDetail(frame) {
@@ -501,10 +637,17 @@ function handleFrame(frame) {
   const decoded = frame.decoded;
   if (decoded) {
     updateObt(decoded.timeSeconds);
+    // Inline failure code on the TM(1,2)/TM(1,8) row itself (SIM-REQ-UI-013),
+    // so the rejection reason is visible without opening the detail view.
+    const isVerificationFailure = decoded.service === 1 && (decoded.subtype === 2 || decoded.subtype === 8);
+    const failureCode = isVerificationFailure ? st1FailureCode(frame) : null;
+    const typeLabel = failureCode !== null
+        ? `TM(${decoded.service},${decoded.subtype}) · ${failureCode}`
+        : `TM(${decoded.service},${decoded.subtype})`;
     addRow(
       "TM",
       decoded.timeSeconds.toFixed(3),
-      `TM(${decoded.service},${decoded.subtype})`,
+      typeLabel,
       String(decoded.sequenceCount),
       String(decoded.messageTypeCounter),
       frame.hex,

@@ -87,6 +87,7 @@ input[type="number"], input[type="text"], select {
 }
 input[type="number"] { width: 5rem; }
 select { min-width: 11rem; }
+#hk-interval { width: 8rem; }
 
 fieldset {
   border: 1px solid var(--border);
