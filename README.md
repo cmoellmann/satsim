@@ -9,6 +9,13 @@ under — and enforcing — the ECSS software development standards
 (ECSS-E-ST-40C, ECSS-Q-ST-80C, tailored): a proof of concept of how
 AI-assisted development and space-grade process discipline work together.
 
+**▶ [Try it live: satsim.onrender.com](https://satsim.onrender.com)** — one
+shared spacecraft for all visitors: everyone sees the same live log,
+including each other's telecommands. Hosted on a free tier that sleeps when
+idle, so the first visit may take up to a minute to wake the simulator
+(fresh boot, on-board time from zero). The instance always runs the latest
+master that passed the full CI gate.
+
 ![SatSim console — live OBT clock, TC(17,1) ping answered by TM(1,1) acceptance, TM(17,2) report, and TM(1,7) completion](docs/assets/console.png)
 
 *The console after one ping with default acknowledgement flags: acceptance
