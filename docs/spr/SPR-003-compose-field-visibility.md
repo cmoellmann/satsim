@@ -1,6 +1,7 @@
 # SPR-003 — Compose form shows all structured HK fields for every type/subtype selection
 
-- Status: Analyzed (disposition proposed: fix)
+- Status: Dispositioned — fix (PR #57 review); fix implemented, closure
+  pending SIM-TC-034 re-run
 - Severity: minor (display only; encoded packets are unaffected), with a
   verification-escape note on the SIM-TC-034 gate record (§2)
 - Reported: 2026-07-19, project lead (C. Möllmann), manual console use;
@@ -79,5 +80,10 @@ steps.
 
 ## 4. Implementation and verification
 
-- Pending disposition. To be recorded here: fixing PR, SIM-TC-034 re-run
-  verdict (date, name), closure date.
+- Disposition: fix, approved 2026-07-19 via review and merge of PR #57.
+- Fix implemented: `[hidden] { display: none !important; }` author-origin
+  guard in `style.css` (fixing PR referencing this SPR). Verified headless
+  (Chromium): TC(17,1) selection now shows only the free application-data
+  field; structured HK groups hidden.
+- Closure pending: full SIM-TC-034 re-run (M) with verdict recorded in the
+  next milestone report (planned: M1d gate, SCR-006).
