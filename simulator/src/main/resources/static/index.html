@@ -45,7 +45,26 @@
             <label><input type="checkbox" id="ack-completion" checked> completion</label>
           </fieldset>
         </div>
-        <div class="row">
+        <div class="row" id="hk-create-fields" hidden>
+          <label>SID
+            <input type="number" id="hk-sid" min="0" max="65535" value="2">
+          </label>
+          <label>Collection interval (ms)
+            <input type="number" id="hk-interval" min="0" max="4294967295" value="5000">
+          </label>
+          <fieldset id="hk-params">
+            <legend>Parameters (ICD §9.5, report order)</legend>
+            <label><input type="checkbox" data-param-id="1" checked> HK-P001 TC accepted</label>
+            <label><input type="checkbox" data-param-id="2"> HK-P002 TM emitted</label>
+            <label><input type="checkbox" data-param-id="3" checked> HK-P003 battery</label>
+          </fieldset>
+        </div>
+        <div class="row" id="hk-sid-list-fields" hidden>
+          <label class="grow">Structure IDs (comma/space separated)
+            <input type="text" id="hk-sids" value="2" spellcheck="false">
+          </label>
+        </div>
+        <div class="row" id="app-data-row">
           <label class="grow">Application data (hex, optional)
             <input type="text" id="app-data" placeholder="e.g. 00 02 00 01" spellcheck="false">
           </label>
