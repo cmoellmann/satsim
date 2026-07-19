@@ -1,7 +1,7 @@
 # SCR-006 — HMI presentation package from SPR dispositions (new increment M1d)
 
-- Status: Implemented (spec level; implementation code follows in the M1d
-  session)
+- Status: Implemented (spec PR #62, frontend implementation + SDD §3.4
+  amendment PR #64; gate record: docs/test-reports/M1d-report.md)
 - Date: 2026-07-19
 - Originator: project lead (C. Möllmann) via SPR-001/002/004/005/006;
   drafted by AI assistant per SDP §6
