@@ -37,7 +37,7 @@ ADR-0002), CCSDS 133.0-B, CCSDS 301.0-B.
 | ISVV | Not applicable | Cat D. |
 | Unit test coverage target | Indicative 80% line coverage on `pus-core`; no formal target elsewhere | Cat D; packet layer is the correctness-critical core. |
 | Configuration management | Git; baseline = annotated tag per milestone; ADRs immutable | Q-ST-80 CM intent met with Git-native means. |
-| NCR/problem reporting | Repository issue tracker | Proportionate to project size. |
+| NCR/problem reporting | SPR register in `docs/spr/` (§2.4, SCR-005) | Same repository-native file-plus-register mechanics as change control (§2.3); proportionate to project size. |
 
 > **ACTION ACT-001 (open):** Verify this matrix, document names, and DRD
 > references against the exact clause numbering of ECSS-E-ST-40C and
@@ -62,8 +62,35 @@ SVS, ICD) go through a **Software Change Request**: an SCR file in
 `docs/scr/` (registered in `docs/scr/SCR-LOG.md`) records the change,
 rationale, and per-CI impact analysis. Disposition is given by the project
 lead via PR review; implementing document updates reference the SCR ID.
-Defects/nonconformances remain with the issue tracker (§2.1); ADRs remain
-governed by their own supersession rule.
+Defects/nonconformances are handled as Software Problem Reports (§2.4); ADRs
+remain governed by their own supersession rule.
+
+### 2.4 Problem reporting
+
+Problems found in the software or its documentation — a **nonconformance
+against the project's own baseline** (code deviates from SRS/ICD/SVS, a
+document deviates from the implemented and validated behavior, documents
+contradict each other) — are recorded as **Software Problem Reports**: an SPR
+file in `docs/spr/`, registered in `docs/spr/SPR-LOG.md` (SCR-005).
+
+- **Content per SPR:** affected CI/component and version (commit or tag)
+  where observed; problem description with observed vs expected behavior and
+  evidence; analysis (cause); disposition; implementation and verification of
+  the fix (fixing PRs, regression evidence).
+- **Lifecycle:** Open → Analyzed → Dispositioned (fix / no fix, by the
+  project lead via PR review) → Closed (fix implemented **and verified**) |
+  Rejected (not a problem / duplicate / as-designed).
+- **Demarcation from SCR (§2.3):** an SPR is corrective — the product
+  deviates from its baseline; an SCR is evolutionary — the baseline itself
+  changes. If SPR analysis concludes the baselined specification is wrong,
+  the SPR spawns an SCR and both cross-reference each other; the SPR never
+  changes the specification itself. Discrepancy findings under CLAUDE.md
+  hard rule 1 (reference vectors / expected results vs implementation) are
+  recorded as SPRs.
+- **Regression evidence:** where the fix changes software behavior, closure
+  requires a regression test per CLAUDE.md rule 3 (traced SRS/SVS entry if
+  the defect revealed a specification gap, otherwise at least an untraced
+  unit test). Documentation-only fixes are closed by the correcting PR.
 
 ## 3. Organization, Tools, Conventions
 
@@ -146,6 +173,8 @@ AI (Claude / Claude Code) is used as a development tool. Controls:
 | ICD | docs/icd.md | draft, Issue 1 |
 | ADR log + ADRs | docs/adr/ | ADR-0001…0006 accepted |
 | SDD | docs/sdd.md | created, Issue 1 (draft), ACT-005 |
+| SCR log + SCRs | docs/scr/ | register active, SCR-001…005 |
+| SPR log + SPRs | docs/spr/ | register created (SCR-005) |
 | SUM (user manual) | docs/sum.md | deferred to M2 |
 | SRF (software reuse file: dependencies, licenses) | docs/reuse-file.md | created |
 | Test reports | docs/test-reports/ | generated per baseline |

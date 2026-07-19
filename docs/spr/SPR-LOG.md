@@ -1,0 +1,19 @@
+# Software Problem Report Log — SatSim
+
+Configuration item: SATSIM-SPR-LOG
+Purpose: register of Software Problem Reports (SPRs) — nonconformances of the
+software or its documentation against its own baseline. Instrument defined in
+SDP §2.4 (introduced by SCR-005).
+Status lifecycle: Open → Analyzed → Dispositioned (fix / no fix, by project
+lead via PR review) → Closed (fix implemented and verified) | Rejected
+(not a problem / duplicate / as-designed).
+
+Each SPR file (`SPR-<nnn>-<slug>.md`) records: affected CI/component and the
+version (commit/tag) where observed; problem description (observed vs expected
+behavior, evidence); analysis (cause); disposition; implementation and
+verification (fixing PRs, regression evidence). If the analysis concludes the
+baselined specification is wrong, the SPR spawns an SCR (SDP §2.3) and both
+cross-reference each other.
+
+| ID | Title | Status | Severity | Reported | Affected CI / component | Disposition / closing PRs |
+|----|-------|--------|----------|----------|-------------------------|---------------------------|

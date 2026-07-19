@@ -87,7 +87,8 @@ level — is described in the [Software Design Document](docs/sdd.md).
   instruction-level emulators (QEMU, TSIM, Terma TEMU) — same validation
   suite, unchanged (SIM-REQ-LINK-003).
 - **Change and staffing go through process, not chat.** Scope changes are
-  SCRs with per-document impact analyses, dispositioned by pull-request
+  SCRs with per-document impact analyses, defects are SPRs with analysis,
+  disposition, and verified closure — both dispositioned by pull-request
   review; routine
   implementation is delegated to cheaper models under committed agent
   definitions with bounded authority, every delegated diff reviewed before
@@ -119,6 +120,7 @@ external clients and Yamcs.
 | Software Design Document (SDD) | [docs/sdd.md](docs/sdd.md) | As-built architecture to class level: modules, threads, key flows |
 | Architecture decisions (ADR) | [docs/adr/DECISION-LOG.md](docs/adr/DECISION-LOG.md) | Immutable decision log; [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) (simulation time ownership) as the full-form sample |
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
+| Software Problem Reports (SPR) | [docs/spr/SPR-LOG.md](docs/spr/SPR-LOG.md) | Problem/nonconformance register (SCR-005): observed vs expected behavior, cause analysis, disposition, verified closure |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
 | Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md), [M1a](docs/test-reports/M1a-report.md), [M1b](docs/test-reports/M1b-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |

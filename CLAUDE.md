@@ -25,6 +25,9 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
 - `docs/adr/` — decision log (`DECISION-LOG.md`, ADR-0001…0006 summaries) plus
   full ADR files where warranted (currently only ADR-0006). **Immutable once
   accepted.**
+- `docs/spr/` — Software Problem Reports (`SPR-LOG.md` register): defects and
+  documentation nonconformances against the baseline, with analysis,
+  disposition, and verified closure (SDP §2.4).
 
 ## Architecture decisions in one breath
 
@@ -40,7 +43,7 @@ time master**, OBSW targets are stepped slaves via `EmulatorControl` with
 
 1. **Never modify** ICD reference vectors/anchors or SVS expected results to
    make a test pass. If implementation and ICD disagree, stop and report the
-   discrepancy as a finding.
+   discrepancy as a finding — recorded as an SPR in `docs/spr/` (SDP §2.4).
 2. **Never read wall-clock time in simulation logic** (`System.currentTimeMillis`,
    `Instant.now`, etc.). Use `SimulationClock`. Wall clock is allowed only in
    the interactive pacing policy and infrastructure/logging.
