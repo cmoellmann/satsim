@@ -50,8 +50,9 @@ What the PoC covers today:
   chunks with bounded authority, the senior model reviews every delegated
   diff, the human merges.
 - **PUS-C over CCSDS space packets**, strictly tailored: ST[17] connection
-  test and the ST[1] request verification subset live; ST[3] housekeeping
-  specified and next (M1b). Single APID, CUC 4+2 on-board time.
+  test, the ST[1] request verification subset, and the ST[3] housekeeping
+  subset live — the simulator emits periodic telemetry from the moment it
+  boots. Single APID, CUC 4+2 on-board time.
 - **A thin web console**: running OBT clock, live packet log with rejection
   rows and field-level detail view, compose form whose hex preview *is* the
   ICD reference vector.
@@ -99,12 +100,12 @@ level — is described in the [Software Design Document](docs/sdd.md).
 | [`M0`](https://github.com/cmoellmann/satsim/releases/tag/M0) | 2026-07-18 | Walking skeleton: build, CI, interface trio, loopback target, CRC + primary header codecs | [M0 report](docs/test-reports/M0-report.md) |
 | [`M1`](https://github.com/cmoellmann/satsim/releases/tag/M1) | 2026-07-18 | TC(17,1)→TM(17,2) chain: PUS-C codecs, time-mastered scheduler, REST/WS API, web console, determinism replay | [M1 report](docs/test-reports/M1-report.md) |
 | [`M1a`](https://github.com/cmoellmann/satsim/releases/tag/M1a) | 2026-07-18 | HMI package ([SCR-003](docs/scr/SCR-003-hmi-improvements.md)): OBT clock, rejection rows, detail view. ST[1] request verification ([SCR-002](docs/scr/SCR-002-st1-verification.md)): TM(1,1)/(1,2)/(1,7) | [M1a report](docs/test-reports/M1a-report.md) |
+| `M1b` | 2026-07-19 | ST[3] housekeeping ([SCR-001](docs/scr/SCR-001-st3-housekeeping.md)): periodic TM(3,25) from boot, structure lifecycle, ST[1] TM(1,8) semantic-error reports (ICD OP-3 resolved) | [M1b report](docs/test-reports/M1b-report.md) |
 
-Currently: **93/93 tests green**, pus-core line coverage **95.74 %**
+Currently: **130/130 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
-**Next: M1b** — ST[3] housekeeping per
-[SCR-001](docs/scr/SCR-001-st3-housekeeping.md); periodic telemetry flows
-before the user sends anything.
+**Next: M2** — TCP length-framed space-packet link (ICD §8), the door for
+external clients and Yamcs.
 
 ## Document set (ECSS compliant)
 
@@ -118,7 +119,7 @@ before the user sends anything.
 | Architecture decisions (ADR) | [docs/adr/DECISION-LOG.md](docs/adr/DECISION-LOG.md) | Immutable decision log; [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) (simulation time ownership) as the full-form sample |
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
-| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md), [M1a](docs/test-reports/M1a-report.md)): test results, coverage, traceability matrix, human review verdicts |
+| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md), [M1a](docs/test-reports/M1a-report.md), [M1b](docs/test-reports/M1b-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 
@@ -127,10 +128,9 @@ before the user sends anything.
 - **In-process loopback target only.** No real OBSW binary runs yet — the
   target seam exists precisely for that, but native processes arrive at M3
   and emulated OBSW binaries at M5.
-- **Tailored service subset.** ST[17] and the ST[1]
-  acceptance/completion subset are live; ST[3] housekeeping is specified but
-  not implemented (M1b). TM(1,8) completion-failure reports are dormant until
-  a service with semantic execution errors exists (M1b, ICD OP-3).
+- **Tailored service subset.** ST[17], the ST[1] acceptance/completion
+  subset, and the ST[3] housekeeping subset are live; everything else is
+  rejected per the ICD (and says so on the wire).
 - **Single APID (100), single ground source, strict PUS-C only** — by
   design (ADR-0002/0003), not by accident.
 - **The web console is a PoC HMI, not a mission control system.** It paces
@@ -151,9 +151,6 @@ before the user sends anything.
 
 Planned increments per [SDP §4](docs/sdp.md), each behind a milestone gate:
 
-- **M1b** — ST[3] housekeeping subset ([SCR-001](docs/scr/SCR-001-st3-housekeeping.md)):
-  create/enable/disable report structures, periodic TM(3,25), default
-  structure reporting at startup.
 - **M2** — TCP length-framed space-packet link: external client demo over
   TCP, conformance-tested framing.
 - **M3** — native OBSW demo process (small C or Rust ST[17] responder):
