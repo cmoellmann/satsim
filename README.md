@@ -16,7 +16,7 @@ idle, so the first visit may take up to a minute to wake the simulator
 (fresh boot, on-board time from zero). The instance always runs the latest
 master that passed the full CI gate.
 
-![SatSim console — live OBT clock, TC(17,1) ping answered by TM(1,1) acceptance, TM(17,2) report, and TM(1,7) completion](docs/assets/console.png)
+![SatSim console — structured TC(3,1) compose, live OBT clock, and a causally ordered packet log with periodic TM(3,25) housekeeping, a TC(17,1) ping group, and a TM(1,8) failure report with its ICD failure-code name in a dedicated column](docs/assets/console.png)
 
 *The console after one ping with default acknowledgement flags: acceptance
 report, service report, completion report — each row expandable to a
