@@ -66,4 +66,7 @@ tailoring row "NCR/problem reporting":
 
 ## 5. Findings during implementation
 
-- None yet.
+- Adding the SPR-log row to the SDP §7 documentation plan exposed a latent
+  omission: the SCR log (`docs/scr/`, instrument since SCR-001) had never
+  been listed there. Row added in the same PR (spotted by the project lead
+  in review).

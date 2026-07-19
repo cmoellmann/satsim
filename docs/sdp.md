@@ -173,6 +173,7 @@ AI (Claude / Claude Code) is used as a development tool. Controls:
 | ICD | docs/icd.md | draft, Issue 1 |
 | ADR log + ADRs | docs/adr/ | ADR-0001…0006 accepted |
 | SDD | docs/sdd.md | created, Issue 1 (draft), ACT-005 |
+| SCR log + SCRs | docs/scr/ | register active, SCR-001…005 |
 | SPR log + SPRs | docs/spr/ | register created (SCR-005) |
 | SUM (user manual) | docs/sum.md | deferred to M2 |
 | SRF (software reuse file: dependencies, licenses) | docs/reuse-file.md | created |
