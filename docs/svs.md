@@ -41,6 +41,7 @@
 | SIM-TC-030 | SIM-REQ-UI-006, SIM-REQ-UI-007, SIM-REQ-UI-008 | Frontend log: row content and controls | M | Checklist: TC rows show injection OBT and sequence count; a rejected TC appears as a visually distinct rejection row with reason; direction and service filters, clear, and pause-autoscroll work as labelled. Verdict + date + name recorded in milestone report. (Scope: M1a, per SCR-003.) |
 | SIM-TC-031 | SIM-REQ-UI-009 | Frontend packet detail view | M | Checklist: selecting a TM row and a composed TC row shows the field-level breakdown (primary header, secondary header, application data, CRC); selecting an undecodable raw injection shows the failing check instead. Verdict + date + name recorded in milestone report. (Scope: M1a, per SCR-003.) |
 | SIM-TC-032 | SIM-REQ-UI-005, SIM-REQ-UI-010 | Frontend compose and orientation | M | Checklist: header is prominent, contains an orientation sentence and the running OBT clock; compose offers Type/Subtype dropdowns pre-populated from the tailored TC set with working custom free-entry; labels read "Type"/"Subtype". Verdict + date + name recorded in milestone report. (Scope: M1a, per SCR-003.) |
+| SIM-TC-033 | SIM-REQ-VER-003, SIM-REQ-HK-001, SIM-REQ-HK-004 | Execution failure reports for ST[3] semantic errors | A | Fresh start: injecting V-NEG-03 at T=0 yields exactly one TM(1,8), byte-identical to V-TM-09, no TM(1,1)/TM(1,7), and no housekeeping state change (no SID 99 reports on subsequent advance). Additionally, each ICD §9.1 semantic error class (illegal SID, duplicate SID, unknown SID, interval below minimum, unknown parameter) yields exactly one TM(1,8) carrying its ICD §10.4 failure code, with the housekeeping configuration unchanged. (Scope: M1b, per ICD OP-3 resolution / SCR-001.) |
 
 ## Change log
 
@@ -52,3 +53,4 @@
 | 1 (draft) | 2026-07-18 | SIM-TC-022…025 added (ST[1] request verification subset, scope M1a); SIM-TC-007 pass criterion amended (TM(1,2) on PUS-version rejection from M1a). Per SCR-002. |
 | 1 (draft) | 2026-07-18 | SIM-TC-026 added (review-verdict gate self-check, scope M1) per ACT-004. |
 | 1 (draft) | 2026-07-18 | SIM-TC-027…032 added (HMI improvement package, scope M1a) per SCR-003. |
+| 1 (draft) | 2026-07-19 | SIM-TC-033 added (ST[3] semantic-error execution failure reports, scope M1b) per ICD OP-3 resolution (SCR-001). |

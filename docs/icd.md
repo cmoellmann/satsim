@@ -6,6 +6,7 @@
 - Issue 2 (draft) changes vs Issue 1: added §9 (ST[3] housekeeping subset), reference vectors §6.4/§6.5, OP-3; open points renumbered §9→§10. Per SCR-001.
 - Issue 3 (draft) changes vs Issue 2: added §10 (ST[1] request verification subset), reference vectors §6.6; V-NEG-02 clarified with explicit bytes (CRC recomputed — as previously worded the packet failed the CRC check before the version check); frontend default ack flags §3 updated; OP-1 closed, OP-3 re-targeted to M1b; open points renumbered §10→§11. Per SCR-002.
 - Issue 4 (draft) changes vs Issue 3: §8 web API restructured and extended — WebSocket frame-type discriminator `kind` (breaking change vs. the Issue 3 TM-only frame), time frames, rejection frames, extended `POST /api/tc` response. Space-link packet definitions (§2–§7) and all reference vectors unchanged. Per SCR-003.
+- Issue 5 (draft) changes vs Issue 4: OP-3 resolved (M1b, per SCR-001) — ST[3] semantic errors now yield TM(1,8) failed-completion reports: §9.1/§9.2/§9.3 error handling formalized, §10.2 completion rule updated, §10.4 failure codes 0x0004–0x0008 added, new reference vectors §6.7 (V-NEG-03, V-TM-09); OP-3 closed in §11. Existing vectors unchanged.
 
 > **RULE (binding, see CLAUDE.md):** The reference vectors in §6 are the authoritative
 > byte-level contract. Implementation and tests conform to this document; this
@@ -197,6 +198,26 @@ ILLEGAL_PUS_VERSION (27 octets):
 08 64 C0 00 00 14 20 01 02 00 00 00 00 00 00 00 00 00 00 18 64 C0 00 00 01 BC E4
 ```
 
+### 6.7 ST[3] semantic error vectors (OP-3 resolution, §9.1/§10.4)
+
+Scenario C — fresh start, V-NEG-03 injected at T=0:
+
+V-NEG-03: TC(3,5) enable periodic generation for the non-existing SID 99 —
+structurally valid (CRC, PUS version, layout per §9.3), semantically invalid
+per §9.1; N=1, ack=0b0000, seq count=0 (17 octets):
+
+```
+18 64 C0 00 00 0A 20 03 05 00 00 00 01 00 63 6A B3
+```
+
+V-TM-09: TM(1,8) failed completion for V-NEG-03 — seq count=0, msg type
+counter=0, T=0.0 s, request ID `18 64 C0 00`, failure code 0x0006
+UNKNOWN_SID (27 octets):
+
+```
+08 64 C0 00 00 14 20 01 08 00 00 00 00 00 00 00 00 00 00 18 64 C0 00 00 06 6A D7
+```
+
 ## 7. Packet Error Control: CRC-16
 
 - CRC-CCITT: polynomial 0x1021, initial value 0xFFFF, no reflection, no final XOR.
@@ -262,11 +283,13 @@ prefix followed by the packet octets. Host/port configurable.
 | TM(3,25) | space → ground | Housekeeping parameter report |
 
 All other ST[3] subservices are not implemented. A TC that is structurally
-valid (CRC, PUS version) but semantically invalid per this section — unknown
-SID, unknown parameter ID, SID 0, duplicate SID on create, collection
-interval below the minimum — is discarded without TM response; the rejection
-is observable in the simulator log. Formal error reporting is deferred to
-ST[1] (OP-3).
+valid (it passes all §10.2 acceptance checks) but semantically invalid per
+this section — unknown SID, unknown parameter ID, SID 0, duplicate SID on
+create, collection interval below the minimum — fails execution: it yields
+exactly one TM(1,8) failed-completion report with the corresponding §10.4
+failure code and leaves the housekeeping configuration unchanged. The
+rejection remains additionally observable in the simulator log. (OP-3
+resolved at M1b per SCR-001.)
 
 ### 9.2 TC(3,1) — create housekeeping report structure (application data)
 
@@ -279,6 +302,12 @@ ST[1] (OP-3).
 
 A created structure starts with periodic generation **disabled**.
 
+Semantic checks run in this order — the first failing check determines the
+§10.4 failure code of the single TM(1,8): SID validity (0 or the reserved
+SID 1 → ILLEGAL_SID; already existing → DUPLICATE_SID), collection interval
+(< 100 ms → ILLEGAL_COLLECTION_INTERVAL), parameter IDs (any ID not in §9.5
+→ UNKNOWN_PARAMETER).
+
 ### 9.3 TC(3,5) / TC(3,7) — enable/disable periodic generation (application data)
 
 | Field | Size | Value/Convention |
@@ -289,6 +318,10 @@ A created structure starts with periodic generation **disabled**.
 Enabling an already-enabled structure or disabling an already-disabled one is
 a no-op (not an error). When a structure is enabled at simulated time t0, it
 emits reports at t0 + k·interval (k = 1, 2, …) until disabled.
+
+A TC(3,5)/TC(3,7) whose SID list references a non-existing SID fails
+atomically: no listed structure changes state, and exactly one TM(1,8) with
+§10.4 code UNKNOWN_SID is emitted.
 
 ### 9.4 TM(3,25) — housekeeping parameter report (application data)
 
@@ -349,7 +382,8 @@ TCs in the tailored service set).
   check terminates processing with exactly one TM(1,2).
 - **Completion** verifies execution of the accepted request. Semantic
   execution errors yield exactly one TM(1,8); the ST[3] semantic error cases
-  (§9.1) map to TM(1,8)/TM(1,2) when OP-3 is resolved at M1b.
+  (§9.1) yield TM(1,8) with the failure codes of §10.4 (OP-3 resolved at
+  M1b). A TC that fails completion never additionally yields TM(1,7).
 - Report ordering on the wire for an accepted TC: TM(1,1) (if requested) —
   service TM (if any) — TM(1,7)/TM(1,8). A TC is never acknowledged more
   than once per subtype.
@@ -375,12 +409,14 @@ TM(1,2) / TM(1,8): as above, followed by:
 | 0x0001 | ILLEGAL_PUS_VERSION | TM(1,2) | TC PUS version number ≠ 2 |
 | 0x0002 | ILLEGAL_SERVICE_OR_SUBTYPE | TM(1,2) | Service type or message subtype not implemented per this ICD |
 | 0x0003 | ILLEGAL_APPLICATION_DATA | TM(1,2) | Application data length or field structure invalid per the service sections |
-
-Further codes (ST[3] semantic errors: unknown SID, illegal SID, interval
-below minimum, …) are added when OP-3 is resolved at M1b.
+| 0x0004 | ILLEGAL_SID | TM(1,8) | SID 0, or TC(3,1) targeting the reserved SID 1 (§9.2/§9.6) |
+| 0x0005 | DUPLICATE_SID | TM(1,8) | TC(3,1) with a SID that already exists |
+| 0x0006 | UNKNOWN_SID | TM(1,8) | TC(3,5)/TC(3,7) referencing a SID that does not exist (§9.3, atomic) |
+| 0x0007 | ILLEGAL_COLLECTION_INTERVAL | TM(1,8) | TC(3,1) collection interval below the §9.2 minimum (100 ms) |
+| 0x0008 | UNKNOWN_PARAMETER | TM(1,8) | TC(3,1) referencing a parameter ID not defined in §9.5 |
 
 ## 11. Open points
 
 - OP-1: **Closed by SCR-002** (ST[1] verification report formats: §10, vectors §6.6).
 - OP-2: Field values for source/destination ID revisit when multi-node (constellation) scenarios are introduced.
-- OP-3: ST[3] semantic error handling (§9.1) currently log-only; formalize as ST[1] failure reports (§10.4) at M1b (SCR-001, re-targeted from M2 by SCR-002).
+- OP-3: **Closed in Issue 5** (M1b, per SCR-001): ST[3] semantic errors yield TM(1,8) failure reports — §9.1/§9.2/§9.3, codes §10.4 (0x0004–0x0008), vectors §6.7.
