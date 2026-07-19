@@ -1,6 +1,7 @@
 # SPR-001 — Frontend log can show response TM rows as preceding the TC that caused them
 
-- Status: Analyzed (disposition proposed: fix)
+- Status: Dispositioned — fix (PR #55 review); implementing SCR: SCR-006
+  (M1d), closure at the M1d gate via SIM-TC-037
 - Severity: minor (display only; wire behavior and determinism unaffected)
 - Reported: 2026-07-19, project lead (C. Möllmann), manual console use;
   analysis by AI assistant per SDP §6
@@ -79,5 +80,8 @@ link, where ground-side clients will need a TC echo anyway.
 
 ## 4. Implementation and verification
 
-- Pending disposition. To be recorded here: fixing PR(s), SCR-006 reference,
-  regression evidence (SVS case verdict), closure date.
+- Disposition: fix, approved 2026-07-19 via review and merge of PR #55.
+- SCR-006 raised 2026-07-19 (SIM-REQ-UI-014, SIM-TC-037; item 1 of the M1d
+  HMI presentation package).
+- Pending: implementation PR (M1d), SIM-TC-037 verdict at the M1d gate,
+  closure date.

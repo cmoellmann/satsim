@@ -1,6 +1,6 @@
 # SPR-002 — Failure code embedded in the type column impairs log readability
 
-- Status: Analyzed (disposition proposed: reject as-designed → convert to SCR)
+- Status: Rejected (as-designed; converted to SCR-006, M1d)
 - Severity: minor (readability; no functional deviation)
 - Reported: 2026-07-19, project lead (C. Möllmann), manual console use;
   analysis by AI assistant per SDP §6
@@ -52,5 +52,7 @@ cross-reference to the implementing SCR once raised.
 
 ## 4. Implementation and verification
 
-- Pending disposition. To be recorded here: implementing SCR reference and
-  closure (this SPR itself requires no fix).
+- Disposition: reject as-designed, approved 2026-07-19 via review and merge
+  of PR #56. Converted to SCR-006 (item 2, dedicated failure-code column,
+  M1d; SIM-TC-036 amended). No fix under this SPR — closed as Rejected with
+  this cross-reference.
