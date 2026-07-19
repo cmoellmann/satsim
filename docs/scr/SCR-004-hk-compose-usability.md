@@ -72,4 +72,11 @@ backend-encoded — the compose preview still round-trips through
 
 ## 5. Findings during implementation
 
-(to be filled during implementation)
+- Extracting the shared `st1FailureCode()` helper (implementation PR #50)
+  surfaced a latent display defect: the ST[1] detail view previously sliced
+  the trailing 4 hex chars of TM(1,2)/(1,8) application data unconditionally,
+  so truncated application data would have shown request-ID bytes as a
+  failure code. Fixed with a minimum-length guard ("(missing)" is shown
+  instead). Display-only; no ICD/SRS impact.
+- None otherwise; the implementation matched the specification without
+  further spec feedback.
