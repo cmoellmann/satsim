@@ -104,6 +104,7 @@ level — is described in the [Software Design Document](docs/sdd.md).
 | [`M1b`](https://github.com/cmoellmann/satsim/releases/tag/M1b) | 2026-07-19 | ST[3] housekeeping ([SCR-001](docs/scr/SCR-001-st3-housekeeping.md)): periodic TM(3,25) from boot, structure lifecycle, ST[1] TM(1,8) semantic-error reports (ICD OP-3 resolved) | [M1b report](docs/test-reports/M1b-report.md) |
 | [`M1c`](https://github.com/cmoellmann/satsim/releases/tag/M1c) | 2026-07-19 | HK compose usability ([SCR-004](docs/scr/SCR-004-hk-compose-usability.md)): structured TC(3,1)/(3,5)/(3,7) compose, interpreted ST[3] TC detail, inline TM(1,2)/(1,8) failure codes | [M1c report](docs/test-reports/M1c-report.md) |
 | [`M1d`](https://github.com/cmoellmann/satsim/releases/tag/M1d) | 2026-07-19 | HMI presentation ([SCR-006](docs/scr/SCR-006-hmi-presentation.md)) from the first [SPR campaign](docs/spr/SPR-LOG.md): causal log ordering, failure-code column, numeric dropdowns, widened layout | [M1d report](docs/test-reports/M1d-report.md) |
+| [`M1e`](https://github.com/cmoellmann/satsim/releases/tag/M1e) | 2026-07-19 | Repository link + mobile usability ([SCR-007](docs/scr/SCR-007-repo-link-mobile.md)): console→repo link, layout reflow down to 360 px viewports with in-card log scrolling | [M1e report](docs/test-reports/M1e-report.md) |
 
 Currently: **130/130 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
@@ -123,7 +124,7 @@ external clients and Yamcs.
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Problem Reports (SPR) | [docs/spr/SPR-LOG.md](docs/spr/SPR-LOG.md) | Problem/nonconformance register (SCR-005): observed vs expected behavior, cause analysis, disposition, verified closure |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
-| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records ([M0](docs/test-reports/M0-report.md), [M1](docs/test-reports/M1-report.md), [M1a](docs/test-reports/M1a-report.md), [M1b](docs/test-reports/M1b-report.md)): test results, coverage, traceability matrix, human review verdicts |
+| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records, one per closed milestone (M0 … [M1e](docs/test-reports/M1e-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 

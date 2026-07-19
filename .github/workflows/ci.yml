@@ -18,7 +18,7 @@ jobs:
       - name: Build and test
         run: ./mvnw -B verify
       - name: Traceability consistency gate (SIM-REQ-QA-001/002)
-        run: java -cp sim-test-support/target/classes org.satsim.testsupport.trace.TraceabilityCheck --root . --milestone M1d --gate
+        run: java -cp sim-test-support/target/classes org.satsim.testsupport.trace.TraceabilityCheck --root . --milestone M1e --gate
 
   # Public demo image: built only after the full CI gate passed on master,
   # pushed to GHCR, then Render is told to pull it (no git clone on Render's
