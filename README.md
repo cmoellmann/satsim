@@ -133,8 +133,6 @@ before the user sends anything.
 - **No external transport.** The TCP length-framed space-packet link (M2)
   and Yamcs attachment (M4) are not built yet; today the only way in is
   REST/WS.
-- **No LICENSE file yet** (SRF-OPEN-1) — the repository is public source,
-  not yet open source; the license decision is tracked and pending.
 - **Coverage target on pus-core only** (SDP §2.1 tailoring); other modules
   are covered by validation tests without a numeric bar.
 - **Lightweight milestone model, not the ECSS review life cycle.** ECSS
@@ -193,6 +191,13 @@ For a quick tour of the methodology, read
 decision process, [SDP §6](docs/sdp.md) for the AI-governance controls, and
 the [M0 report](docs/test-reports/M0-report.md) for what a milestone gate
 produces.
+
+## License
+
+[Apache License 2.0](LICENSE) — chosen and recorded in the
+[Software Reuse File](docs/reuse-file.md) (closes SRF-OPEN-1); all reused
+components are compatible (copyleft components are confined to build/test
+scope).
 
 ---
 
