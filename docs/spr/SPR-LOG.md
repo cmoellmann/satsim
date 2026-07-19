@@ -22,3 +22,4 @@ cross-reference each other.
 | SPR-003 | Compose form shows all structured HK fields for every type/subtype selection | Analyzed | minor | 2026-07-19 | simulator frontend (`style.css` compose form) | proposed: fix (`[hidden]` CSS guard); SIM-TC-034 re-run at closure (verification-escape note) |
 | SPR-004 | Type dropdown lists ST[17] before ST[3] instead of numeric order | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` compose dropdowns) | proposed: reject (baseline silent) → convert to SCR (numeric sort) |
 | SPR-005 | Narrow page layout wraps TM raw hex onto two lines | Analyzed | minor | 2026-07-19 | simulator frontend (`style.css` page layout) | proposed: reject (baseline silent) → convert to SCR (wider layout cap) |
+| SPR-006 | "Live packet log" heading not top-aligned in its card | Analyzed | minor | 2026-07-19 | simulator frontend (`style.css` log card header) | proposed: reject (baseline silent) → convert to SCR (top-left alignment) |
