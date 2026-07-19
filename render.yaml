@@ -1,11 +1,18 @@
 # Render blueprint: SatSim public demo instance (free tier).
+# The service runs the prebuilt image from GHCR — Render does not clone the
+# repo (GitHub throttles anonymous clones from Render's shared IPs). The
+# image is built and pushed by the CI deploy-demo job after the gate passes
+# on master; the job then hits the service's deploy hook
+# (RENDER_DEPLOY_HOOK_URL repo secret) so the instance pulls the new image.
+#
 # One shared simulator: all visitors see the same spacecraft and each
 # other's telecommands. The free instance spins down after ~15 min idle;
 # the next visit restarts it with a fresh simulation (OBT from zero).
 services:
   - type: web
     name: satsim
-    runtime: docker
+    runtime: image
+    image:
+      url: ghcr.io/cmoellmann/satsim:latest
     plan: free
-    branch: master
     healthCheckPath: /
