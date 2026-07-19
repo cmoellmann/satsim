@@ -1,7 +1,7 @@
 # SCR-007 — Repository link and mobile usability package (new increment M1e)
 
 - Status: Implemented (spec PR #71; frontend implementation + SDD
-  amendment PR #72; gate record follows at M1e)
+  amendment PR #72; gate record: docs/test-reports/M1e-report.md)
 - Date: 2026-07-19
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-SRS, SATSIM-SVS
