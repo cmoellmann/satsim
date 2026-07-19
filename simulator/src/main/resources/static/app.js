@@ -16,6 +16,15 @@ const TC_TYPES = [
     name: "ST[17] Test",
     subtypes: [{ subtype: 1, name: "Are-you-alive (ping)" }],
   },
+  {
+    type: 3,
+    name: "ST[3] Housekeeping",
+    subtypes: [
+      { subtype: 1, name: "Create HK structure" },
+      { subtype: 5, name: "Enable periodic reports" },
+      { subtype: 7, name: "Disable periodic reports" },
+    ],
+  },
 ];
 const CUSTOM = "custom";
 
@@ -279,11 +288,17 @@ function tcDetail(response) {
   return { groups };
 }
 
-// ICD §10.4 failure codes (TM(1,2)/TM(1,8) app data).
+// ICD §10.4 failure codes (TM(1,2)/TM(1,8) app data); 4..8 are the ST[3]
+// semantic error codes added under OP-3 at M1b.
 const ST1_FAILURE_CODES = {
   1: "ILLEGAL_PUS_VERSION",
   2: "ILLEGAL_SERVICE_OR_SUBTYPE",
   3: "ILLEGAL_APPLICATION_DATA",
+  4: "ILLEGAL_SID",
+  5: "DUPLICATE_SID",
+  6: "UNKNOWN_SID",
+  7: "ILLEGAL_COLLECTION_INTERVAL",
+  8: "UNKNOWN_PARAMETER",
 };
 
 // TM frames carry no decoded appDataHex field; the app data is sliced out of
@@ -308,6 +323,29 @@ function st1VerificationGroup(frame, decoded) {
   return ["ST[1] verification", rows];
 }
 
+// ICD §9.6: SID 1 is the default structure (HK-P001/002/003, fixed order);
+// its layout is known statically. Any other SID's layout was defined by
+// whatever TC(3,1) created it (§9.2), which the ground UI has not observed
+// (no structure-definition tracking here), so we can only show raw hex.
+function st3HousekeepingGroup(frame) {
+  const appDataHex = tmAppDataHex(frame);
+  const sidHex = appDataHex.slice(0, 4);
+  const sid = sidHex ? parseInt(sidHex, 16) : null;
+  const rows = [["SID", sid === null ? "(missing)" : String(sid)]];
+  if (sid === 1) {
+    const tcAccepted = parseInt(appDataHex.slice(4, 12), 16);
+    const tmEmitted = parseInt(appDataHex.slice(12, 20), 16);
+    const batteryMv = parseInt(appDataHex.slice(20, 24), 16);
+    rows.push(["HK-P001 TC accepted count", tcAccepted]);
+    rows.push(["HK-P002 TM emitted count", tmEmitted]);
+    rows.push(["HK-P003 battery voltage", `${batteryMv} mV`]);
+  } else {
+    rows.push(["Parameter values (hex)", appDataHex.slice(4) || "(empty)"]);
+    rows.push(["Note", "structure layout ground-side unknown (defined by the TC(3,1) that created this SID, ICD §9.2)"]);
+  }
+  return ["ST[3] housekeeping report", rows];
+}
+
 function tmDetail(frame) {
   const decoded = frame.decoded;
   const groups = [];
@@ -325,6 +363,9 @@ function tmDetail(frame) {
     ]]);
     if (decoded.service === 1) {
       groups.push(st1VerificationGroup(frame, decoded));
+    }
+    if (decoded.service === 3 && decoded.subtype === 25) {
+      groups.push(st3HousekeepingGroup(frame));
     }
   } else {
     groups.push(["Not decodable", [["Note", "emitted TM failed to decode (defect)"]]]);
