@@ -32,7 +32,9 @@ const CUSTOM = "custom";
 // --- Compose dropdowns (SIM-REQ-UI-010) ---
 
 function fillTypeSelect() {
-  for (const entry of TC_TYPES) {
+  // Ascending numeric order independent of TC_TYPES declaration order,
+  // custom… last (SCR-006/SPR-004).
+  for (const entry of [...TC_TYPES].sort((a, b) => a.type - b.type)) {
     const option = document.createElement("option");
     option.value = String(entry.type);
     option.textContent = `${entry.type} — ${entry.name}`;
@@ -42,6 +44,9 @@ function fillTypeSelect() {
   custom.value = CUSTOM;
   custom.textContent = "custom…";
   $("type-select").appendChild(custom);
+  // The first-declared entry (ST[17] test) stays the initial selection;
+  // SCR-006 changes listing order only.
+  $("type-select").value = String(TC_TYPES[0].type);
   fillSubtypeSelect();
 }
 
@@ -49,7 +54,7 @@ function fillSubtypeSelect() {
   const select = $("subtype-select");
   select.replaceChildren();
   const entry = TC_TYPES.find((t) => String(t.type) === $("type-select").value);
-  for (const sub of entry ? entry.subtypes : []) {
+  for (const sub of entry ? [...entry.subtypes].sort((a, b) => a.subtype - b.subtype) : []) {
     const option = document.createElement("option");
     option.value = String(sub.subtype);
     option.textContent = `${sub.subtype} — ${sub.name}`;
@@ -224,12 +229,20 @@ function applyFilters() {
   }
 }
 
-function addRow(kind, obt, type, seq, ctr, hex, service, detail) {
+// Sort-key kinds (SIM-REQ-UI-014): at equal on-board time a TC sits below
+// the rejection and TM rows it caused.
+const KIND_RANK = { TC: 0, REJ: 1, TM: 2 };
+
+function addRow(kind, obt, timeSeconds, type, seq, ctr, failure, hex, service, detail) {
   const row = document.createElement("tr");
   row.className = kind.toLowerCase();
   row.dataset.kind = kind;
   row.dataset.service = service === null || service === undefined ? "" : String(service);
   row.dataset.detail = JSON.stringify(detail);
+  // Full-precision ordering key; rows without a decodable time (undecodable
+  // TM) are keyed at the current OBT of their arrival.
+  row.dataset.time = String(timeSeconds ?? obtSeconds ?? 0);
+  row.dataset.rank = String(KIND_RANK[kind]);
   const chevron = document.createElement("td");
   chevron.className = "chev";
   chevron.textContent = "▸";
@@ -245,6 +258,10 @@ function addRow(kind, obt, type, seq, ctr, hex, service, detail) {
     cell.textContent = value;
     row.appendChild(cell);
   }
+  const failureCell = document.createElement("td");
+  failureCell.className = "failure-cell";
+  failureCell.textContent = failure;
+  row.appendChild(failureCell);
   const hexCell = document.createElement("td");
   hexCell.className = "hex-cell";
   hexCell.title = "Click to copy";
@@ -259,9 +276,34 @@ function addRow(kind, obt, type, seq, ctr, hex, service, detail) {
   insertRow(row);
 }
 
+function sortKey(row) {
+  return [Number(row.dataset.time), Number(row.dataset.rank)];
+}
+
+// Sorted insertion (SIM-REQ-UI-014, SCR-006/SPR-001): newest-first by
+// on-board time regardless of which web-API channel delivered the row
+// first; equal keys keep arrival order — the wire order — latest on top.
+// Insertion is always before a packet row, so an expanded detail row stays
+// glued to the row it belongs to.
 function insertRow(row) {
   row.hidden = !rowVisible(row);
-  logBody.prepend(row);
+  const [time, rank] = sortKey(row);
+  let anchor = null;
+  for (const existing of logBody.children) {
+    if (existing.classList.contains("detail-row")) {
+      continue;
+    }
+    const [t, r] = sortKey(existing);
+    if (t < time || (t === time && r <= rank)) {
+      anchor = existing;
+      break;
+    }
+  }
+  if (anchor) {
+    logBody.insertBefore(row, anchor);
+  } else {
+    logBody.appendChild(row);
+  }
   while (logBody.childElementCount > MAX_ROWS) {
     logBody.lastElementChild.remove();
   }
@@ -292,7 +334,7 @@ logBody.addEventListener("click", (event) => {
   const detailRow = document.createElement("tr");
   detailRow.className = "detail-row";
   const cell = document.createElement("td");
-  cell.colSpan = 7;
+  cell.colSpan = 8;
   cell.appendChild(renderDetail(JSON.parse(row.dataset.detail)));
   detailRow.appendChild(cell);
   row.after(detailRow);
@@ -575,8 +617,10 @@ function addTcRow(response, fallbackLabel) {
   addRow(
     "TC",
     response.timeSeconds.toFixed(3),
+    response.timeSeconds,
     label,
     response.sequenceCount === undefined ? "" : String(response.sequenceCount),
+    "",
     "",
     response.hex,
     decoded ? decoded.service : null,
@@ -630,32 +674,32 @@ function handleFrame(frame) {
   }
   if (frame.kind === "rejection") {
     updateObt(frame.timeSeconds);
-    addRow("REJ", frame.timeSeconds.toFixed(3), frame.reason, "", "", frame.hex,
-        null, rejectionDetail(frame));
+    addRow("REJ", frame.timeSeconds.toFixed(3), frame.timeSeconds, frame.reason,
+        "", "", "", frame.hex, null, rejectionDetail(frame));
     return;
   }
   const decoded = frame.decoded;
   if (decoded) {
     updateObt(decoded.timeSeconds);
-    // Inline failure code on the TM(1,2)/TM(1,8) row itself (SIM-REQ-UI-013),
-    // so the rejection reason is visible without opening the detail view.
+    // Failure code of TM(1,2)/TM(1,8) in the dedicated log column
+    // (SIM-REQ-UI-013 as amended by SCR-006/SPR-002), so the rejection
+    // reason is visible without opening the detail view.
     const isVerificationFailure = decoded.service === 1 && (decoded.subtype === 2 || decoded.subtype === 8);
     const failureCode = isVerificationFailure ? st1FailureCode(frame) : null;
-    const typeLabel = failureCode !== null
-        ? `TM(${decoded.service},${decoded.subtype}) · ${failureCode}`
-        : `TM(${decoded.service},${decoded.subtype})`;
     addRow(
       "TM",
       decoded.timeSeconds.toFixed(3),
-      typeLabel,
+      decoded.timeSeconds,
+      `TM(${decoded.service},${decoded.subtype})`,
       String(decoded.sequenceCount),
       String(decoded.messageTypeCounter),
+      failureCode ?? "",
       frame.hex,
       decoded.service,
       tmDetail(frame),
     );
   } else {
-    addRow("TM", "?", "undecodable", "", "", frame.hex, null, tmDetail(frame));
+    addRow("TM", "?", undefined, "undecodable", "", "", "", frame.hex, null, tmDetail(frame));
   }
 }
 

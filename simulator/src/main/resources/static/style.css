@@ -62,7 +62,10 @@ h2 { font-size: 0.95rem; margin: 0 0 0.7rem; color: var(--accent); }
 .status.offline { color: var(--err); }
 
 main {
-  max-width: 62rem;
+  /* Sized so the tailored set's longest packet (TM(3,25) default-SID
+     report) keeps its raw hex on one log line at common desktop widths
+     (SCR-006/SPR-005, SIM-TC-038). */
+  max-width: 100rem;
   margin: 1rem auto;
   padding: 0 1rem;
   display: grid;
@@ -145,7 +148,9 @@ summary { color: var(--muted); font-size: 0.8rem; cursor: pointer; }
   margin-top: 0.5rem;
 }
 
-.log-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; flex-wrap: wrap; }
+/* flex-start keeps the heading in the card's top-left corner, aligned like
+   the Compose card's (SCR-006/SPR-006). */
+.log-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
 .log-controls { display: flex; gap: 0.7rem; align-items: flex-end; flex-wrap: wrap; margin-bottom: 0.7rem; }
 .kind-filter { padding: 0.2rem 0.5rem 0.35rem; }
 .service-filter input { width: 4.2rem; }
@@ -154,6 +159,7 @@ summary { color: var(--muted); font-size: 0.8rem; cursor: pointer; }
 table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 th, td { text-align: left; padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border); }
 th { color: var(--muted); font-weight: 600; }
+td.failure-cell { font-family: ui-monospace, monospace; color: var(--err); white-space: nowrap; }
 td.hex-cell { font-family: ui-monospace, monospace; word-break: break-all; cursor: copy; }
 td.hex-cell.copied { background: #1c2a1e; }
 tbody tr:not(.detail-row) { cursor: pointer; }

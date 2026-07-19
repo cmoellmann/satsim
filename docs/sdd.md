@@ -353,12 +353,19 @@ Configuration (`application.properties`): `server.port=8090`,
 
 Framework-free HTML/JS (ADR-0005). `app.js` provides (SCR-003 feature set):
 dropdown TC compose from the tailored service set with custom free-entry and
-debounced live hex preview via `POST /api/tc/preview` [SIM-REQ-UI-004, -010];
-TC submission (structured, one-click ping, raw hex injection) with rows built
-from the enriched ICD §8.1 response [SIM-REQ-UI-006]; a live packet log fed
-by the `/api/tm` WebSocket (frame kinds tm/time/rejection, automatic
-reconnect, capped at 200 rows) with kind/service filters, clear and pause
-buffering [SIM-REQ-UI-002, -007, -008]; a header OBT clock driven by time
+debounced live hex preview via `POST /api/tc/preview` [SIM-REQ-UI-004, -010]
+— dropdowns listed in ascending numeric order independent of declaration
+order, custom… last, initial selection ST[17] ping (SCR-006); TC submission
+(structured, one-click ping, raw hex injection) with rows built from the
+enriched ICD §8.1 response [SIM-REQ-UI-006]; a live packet log fed by the
+`/api/tm` WebSocket (frame kinds tm/time/rejection, automatic reconnect,
+capped at 200 rows) with kind/service filters, clear and pause buffering
+[SIM-REQ-UI-002, -007, -008] — rows are not appended in arrival order but
+**sort-inserted** newest-first by full-precision on-board time with a
+TC &lt; rejection &lt; TM tiebreak at equal time (equal keys keep arrival
+order), so the TC row a user sends via REST cannot display after its
+WebSocket-delivered responses despite the two channels racing
+[SIM-REQ-UI-014, SCR-006]; a header OBT clock driven by time
 frames [SIM-REQ-UI-005]; a click-to-expand field-level detail view per row
 plus click-to-copy hex cells [SIM-REQ-UI-009]; structured HK compose fields
 (SID, collection interval, ICD §9.5 parameter selection for TC(3,1); SID
@@ -368,8 +375,9 @@ generate the application-data octets ground-side, with free hex entry
 [SIM-REQ-UI-011]; interpreted ST[3] TC detail decoding those same
 application-data layouts into named fields, falling back to a raw-hex
 mismatch note when a custom compose does not match the ICD layout
-[SIM-REQ-UI-012]; and inline ICD §10.4 failure-code names on TM(1,2)/(1,8)
-log rows [SIM-REQ-UI-013]. Header/CRC/sequence-count encoding remains
+[SIM-REQ-UI-012]; and ICD §10.4 failure-code names of TM(1,2)/(1,8) rows in
+a dedicated log column, empty for all other rows [SIM-REQ-UI-013 as amended
+by SCR-006]. Header/CRC/sequence-count encoding remains
 exclusively backend-side — the compose preview still round-trips through
 `POST /api/tc/preview` — but the frontend deliberately knows the ICD
 §9.2/§9.3/§9.5 application-data layouts for compose and display, as it
