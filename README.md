@@ -174,6 +174,10 @@ growth:
 
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
+- **Subsystem simulation**: modelled spacecraft subsystems (e.g. power,
+  thermal, AOCS) with their own state and dynamics — richer housekeeping
+  content, subsystem-specific TM/TC additions, and realistic fault states
+  for ST[5]/ST[12] to report on.
 - **Database-driven TM/TC definitions**: a SCOS-2000 MIB (or XTCE) as the
   single source for the service tailoring and housekeeping structures —
   which would also feed the Yamcs attachment (M4) instead of a hand-written
