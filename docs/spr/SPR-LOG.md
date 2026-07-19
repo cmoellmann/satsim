@@ -17,9 +17,9 @@ cross-reference each other.
 
 | ID | Title | Status | Severity | Reported | Affected CI / component | Disposition / closing PRs |
 |----|-------|--------|----------|----------|-------------------------|---------------------------|
-| SPR-001 | Frontend log can show response TM rows as preceding the TC that caused them | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | proposed: fix (sorted insertion + SCR-006 for SRS/SVS) |
-| SPR-002 | Failure code embedded in the type column impairs log readability | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | proposed: reject as-designed → convert to SCR (dedicated column) |
-| SPR-003 | Compose form shows all structured HK fields for every type/subtype selection | Dispositioned: fix (PR #57); implemented, closure pending SIM-TC-034 re-run | minor | 2026-07-19 | simulator frontend (`style.css` compose form) | fix PR: `[hidden]` CSS guard; re-run at M1d gate |
-| SPR-004 | Type dropdown lists ST[17] before ST[3] instead of numeric order | Analyzed | minor | 2026-07-19 | simulator frontend (`app.js` compose dropdowns) | proposed: reject (baseline silent) → convert to SCR (numeric sort) |
-| SPR-005 | Narrow page layout wraps TM raw hex onto two lines | Analyzed | minor | 2026-07-19 | simulator frontend (`style.css` page layout) | proposed: reject (baseline silent) → convert to SCR (wider layout cap) |
-| SPR-006 | "Live packet log" heading not top-aligned in its card | Analyzed | minor | 2026-07-19 | simulator frontend (`style.css` log card header) | proposed: reject (baseline silent) → convert to SCR (top-left alignment) |
+| SPR-001 | Frontend log can show response TM rows as preceding the TC that caused them | Dispositioned: fix (PR #55) → SCR-006 (M1d); closure via SIM-TC-037 at the gate | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | SCR-006 |
+| SPR-002 | Failure code embedded in the type column impairs log readability | Rejected (as-designed) | minor | 2026-07-19 | simulator frontend (`app.js` packet log) | converted to SCR-006 (PR #56 disposition) |
+| SPR-003 | Compose form shows all structured HK fields for every type/subtype selection | Dispositioned: fix (PR #57); implemented (PR #61), closure pending SIM-TC-034 re-run | minor | 2026-07-19 | simulator frontend (`style.css` compose form) | fix PR #61: `[hidden]` CSS guard; re-run at M1d gate |
+| SPR-004 | Type dropdown lists ST[17] before ST[3] instead of numeric order | Rejected (baseline silent) | minor | 2026-07-19 | simulator frontend (`app.js` compose dropdowns) | converted to SCR-006 (PR #58 disposition) |
+| SPR-005 | Narrow page layout wraps TM raw hex onto two lines | Rejected (baseline silent) | minor | 2026-07-19 | simulator frontend (`style.css` page layout) | converted to SCR-006 (PR #59 disposition) |
+| SPR-006 | "Live packet log" heading not top-aligned in its card | Rejected (baseline silent) | minor | 2026-07-19 | simulator frontend (`style.css` log card header) | converted to SCR-006 (PR #60 disposition) |

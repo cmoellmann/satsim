@@ -1,6 +1,7 @@
 # SCR-006 — HMI presentation package from SPR dispositions (new increment M1d)
 
-- Status: Proposed
+- Status: Implemented (spec level; implementation code follows in the M1d
+  session)
 - Date: 2026-07-19
 - Originator: project lead (C. Möllmann) via SPR-001/002/004/005/006;
   drafted by AI assistant per SDP §6
@@ -70,11 +71,17 @@ SPR-003 §2).
 
 ## 4. Disposition
 
-- [ ] Approved — project lead, via review and merge of the PR carrying this
-      SCR, the SDP/SRS/SVS updates, and the SPR disposition records.
+- [x] Approved — project lead (C. Möllmann), 2026-07-19, via review and
+      merge of PR #62 (SCR + SDP + SRS + SVS + SPR register in one
+      specification PR).
 
 ## 5. Findings during implementation
 
 - While registering this SCR: the SCR-LOG row of SCR-005 still carried
   status Proposed although PR #54 had implemented it — corrected in the
   same PR (register bookkeeping only).
+- Merging PR #62 required a manual conflict resolution in
+  `docs/spr/SPR-LOG.md` (concurrent PR #61); the resolution dropped this
+  SCR's five register-row updates while all other documents merged intact.
+  Detected by post-merge cross-check, restored in the follow-up register
+  PR. Register bookkeeping only; no specification content affected.
