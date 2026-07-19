@@ -15,8 +15,15 @@ import org.satsim.sim.time.StopReason;
  * <p>Each received TC is "processed" for a fixed simulated delay and then
  * handed to the {@link SimulatedObsw} at its due time; the resulting
  * TM packets are emitted at that same simulated instant (the M0 placeholder
- * echo became a real {@code SimulatedObsw} in M1). TM due exactly at the
- * budget boundary is emitted (event takes precedence over budget exhaustion).
+ * echo became a real {@code SimulatedObsw} in M1). From M1b the OBSW's
+ * autonomous time events ({@link SimulatedObsw#nextEventNanos()}, e.g.
+ * periodic housekeeping) are stop points of exactly the same kind: the grant
+ * window ends at the earliest of next-TC-due and next-event-due, and the due
+ * work is performed at that exact slave-local instant [SIM-REQ-HK-002]. When
+ * both fall on the same instant, the time event is handled first (a TC
+ * arriving at a report boundary is not yet visible to that report). TM due
+ * exactly at the budget boundary is emitted (event takes precedence over
+ * budget exhaustion).
  *
  * <p>Slave-local time only advances inside {@link #grant(long)}; TCs sent
  * between grants arrive at the current grant boundary. Not thread-safe: the
@@ -74,13 +81,28 @@ public final class LoopbackTarget implements ObswTarget {
     if (budgetNanos <= 0) {
       throw new IllegalArgumentException("budgetNanos must be > 0: " + budgetNanos);
     }
-    PendingTc next = pendingTcs.peek();
-    if (next != null && next.dueNanos() - localNanos <= budgetNanos) {
-      long consumed = next.dueNanos() - localNanos;
-      localNanos = next.dueNanos();
-      pendingTcs.remove();
-      for (byte[] tm : obsw.handleTc(next.packet(), localNanos)) {
-        emitTm(tm);
+    PendingTc nextTc = pendingTcs.peek();
+    long tcDue = nextTc != null ? nextTc.dueNanos() : SimulatedObsw.NO_EVENT;
+    long eventDue = obsw.nextEventNanos();
+    long stopAt = Math.min(tcDue, eventDue);
+    if (stopAt != SimulatedObsw.NO_EVENT && stopAt - localNanos <= budgetNanos) {
+      long consumed = stopAt - localNanos;
+      localNanos = stopAt;
+      if (eventDue == stopAt) {
+        for (byte[] tm : obsw.handleTimeEvent(localNanos)) {
+          emitTm(tm);
+        }
+        if (obsw.nextEventNanos() <= localNanos) {
+          throw new IllegalStateException(
+              "OBSW time event at " + localNanos + " did not advance nextEventNanos: "
+                  + obsw.nextEventNanos());
+        }
+      }
+      if (tcDue == stopAt) {
+        pendingTcs.remove();
+        for (byte[] tm : obsw.handleTc(nextTc.packet(), localNanos)) {
+          emitTm(tm);
+        }
       }
       return new Consumed(consumed, StopReason.EVENT_PENDING);
     }
