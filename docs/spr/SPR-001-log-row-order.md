@@ -1,7 +1,7 @@
 # SPR-001 — Frontend log can show response TM rows as preceding the TC that caused them
 
-- Status: Dispositioned — fix (PR #55 review); implementing SCR: SCR-006
-  (M1d), closure at the M1d gate via SIM-TC-037
+- Status: Closed (2026-07-19 — SIM-TC-037 pass at the M1d gate,
+  C. Möllmann; implementing SCR: SCR-006, fix PR #64)
 - Severity: minor (display only; wire behavior and determinism unaffected)
 - Reported: 2026-07-19, project lead (C. Möllmann), manual console use;
   analysis by AI assistant per SDP §6
@@ -87,4 +87,6 @@ link, where ground-side clients will need a TC echo anyway.
   TC < rejection < TM tiebreak at equal time, stable within equal keys
   (`app.js`, PR #64). Verified headless (Chromium/CDP): ping renders
   TM(1,7)/TM(17,2)/TM(1,1)/TC(17,1) top-down at identical OBT.
-- Pending: SIM-TC-037 verdict at the M1d gate, closure date.
+- Closed 2026-07-19: SIM-TC-037 manual pass at the M1d gate (verdict
+  recorded in docs/test-reports/M1d-report.md, C. Möllmann) — five ping
+  repetitions without an inversion, TM(1,8)-above-TC check included.
