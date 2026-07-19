@@ -48,7 +48,7 @@ the Maven distribution unless pinned in `pom.xml`.
 
 | ID | Item | Status |
 |---|---|---|
-| SRF-OPEN-1 | SatSim itself has no `LICENSE` file yet. An outbound license must be chosen before public distribution (planned per README). All current and planned dependencies above are compatible with any common outbound choice (Apache-2.0, MIT, EPL, proprietary) since copyleft components are test/build scope only. | open |
+| SRF-OPEN-1 | SatSim itself has no `LICENSE` file yet. An outbound license must be chosen before public distribution (planned per README). All current and planned dependencies above are compatible with any common outbound choice (Apache-2.0, MIT, EPL, proprietary) since copyleft components are test/build scope only. | **closed 2026-07-19** — outbound license **Apache-2.0** chosen by C. Möllmann; `LICENSE` file added at repo root. All §1 dependencies compatible (permissive or build/test-scope copyleft; Logback used under its EPL-1.0 election, notice obligations apply on distribution). |
 
 ## 4. Change log
 
@@ -59,3 +59,4 @@ the Maven distribution unless pinned in `pom.xml`.
 | 1 (draft) | 2026-07-12 | Maven Wrapper 3.3.4 added; Maven pinned to 3.9.11 project-locally. |
 | 1 (draft) | 2026-07-18 | Spring Boot 3.5.3 (starter-web, starter-websocket runtime; starter-test test; maven plugin build) moved from §2 to §1 per rule-8 approval; Logback license election EPL-1.0 recorded. |
 | 1 (draft) | 2026-07-19 | Eclipse Temurin 21 container images (jdk build stage / jre demo runtime base) added for the Render public-demo deployment. Render itself is a hosting platform, not reused software — noted here for completeness, not registered. |
+| 1 (draft) | 2026-07-19 | SRF-OPEN-1 closed: outbound license Apache-2.0 chosen, `LICENSE` added at repo root (verbatim apache.org text), README updated. Precedes making the repository public. |
