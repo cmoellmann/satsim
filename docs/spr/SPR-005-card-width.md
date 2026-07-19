@@ -1,7 +1,6 @@
 # SPR-005 — Narrow page layout wraps TM raw hex onto two lines
 
-- Status: Analyzed (disposition proposed: reject, baseline silent → convert
-  to SCR)
+- Status: Rejected (baseline silent; converted to SCR-006, M1d)
 - Severity: minor (presentation; no functional deviation)
 - Reported: 2026-07-19, project lead (C. Möllmann), manual console use;
   analysis by AI assistant per SDP §6
@@ -50,5 +49,7 @@ with a cross-reference to the implementing SCR once raised.
 
 ## 4. Implementation and verification
 
-- Pending disposition. To be recorded here: implementing SCR reference and
-  closure (this SPR itself requires no fix).
+- Disposition: reject (baseline silent), approved 2026-07-19 via review and
+  merge of PR #59. Converted to SCR-006 (item 4, widened layout, M1d;
+  SIM-TC-038 added). No fix under this SPR — closed as Rejected with this
+  cross-reference.

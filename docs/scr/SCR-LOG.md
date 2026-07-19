@@ -12,4 +12,5 @@ review) → Implemented (all affected documents updated) | Rejected.
 | SCR-002 | Pull ST[1] request verification forward as new increment M1a | Implemented (spec level) | 2026-07-18 | SDP, ICD, SRS, SVS | #17 (SCR + SDP), #18 (ICD Issue 3, SRS, SVS) |
 | SCR-003 | HMI improvement package (extends increment M1a) | Implemented (spec level) | 2026-07-18 | SDP, ICD, SRS, SVS | #29 (SCR + SDP), #30 (ICD Issue 4, SRS, SVS) |
 | SCR-004 | Structured HK compose, interpreted TC detail, inline failure codes as new increment M1c | Implemented (spec level) | 2026-07-19 | SDP, SRS, SVS | #49 (SCR + SDP + SRS + SVS) |
-| SCR-005 | Introduce Software Problem Reports (SPR) as the problem-reporting instrument | Proposed | 2026-07-19 | SDP, CLAUDE.md, README | (this PR) |
+| SCR-005 | Introduce Software Problem Reports (SPR) as the problem-reporting instrument | Implemented | 2026-07-19 | SDP, CLAUDE.md, README | #54 |
+| SCR-006 | HMI presentation package from SPR dispositions as new increment M1d | Proposed | 2026-07-19 | SDP, SRS, SVS, SPR register | (this PR) |
