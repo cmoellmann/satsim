@@ -32,14 +32,14 @@ impact — the space-link contract and the §8 web API are unchanged.
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| Causal log ordering verified (SIM-TC-037) | PENDING | Manual verdict to be recorded in §"Manual Test Verdicts" below. Supporting evidence: automated pre-merge check at the baseline — a scripted headless run (Chromium/CDP, PR #64) rendered TM(1,7) / TM(17,2) / TM(1,1) / TC(17,1) top-down at identical OBT, and a semantically invalid TC(3,1) showed its TM(1,8) above the TC row. |
-| HMI presentation checklist verified (SIM-TC-038) | PENDING | Manual verdict to be recorded below. Supporting evidence: scripted check at 1512 px viewport — TM(3,25) default-SID raw hex on a single log line; heading at the card's top-left. |
-| Amended SIM-TC-032 re-verified (numeric dropdown order) | PENDING | Manual verdict to be recorded below. Supporting evidence: scripted DOM check — type options `3 — ST[3] / 17 — ST[17] / custom…`, initial selection ST[17]/1. |
-| Amended SIM-TC-036 re-verified (failure-code column) | PENDING | Manual verdict to be recorded below. Supporting evidence: scripted check — failure-code name rendered in the dedicated column on a TM(1,2) row, empty elsewhere. |
-| SIM-TC-034 re-run recorded (SPR-003 closure) | PENDING | Full re-run required per SPR-003 §2 (the M1c verdict's two visibility steps could not have behaved as recorded); fresh verdict to be recorded below. |
+| Causal log ordering verified (SIM-TC-037) | PASS | Verdict recorded in §"Manual Test Verdicts" below: pass, 2026-07-19, C. Möllmann. Supporting evidence: automated pre-merge check at the baseline — a scripted headless run (Chromium/CDP, PR #64) rendered TM(1,7) / TM(17,2) / TM(1,1) / TC(17,1) top-down at identical OBT, and a semantically invalid TC(3,1) showed its TM(1,8) above the TC row. |
+| HMI presentation checklist verified (SIM-TC-038) | PASS | Verdict recorded below: pass, 2026-07-19, C. Möllmann. Supporting evidence: scripted check at 1512 px viewport — TM(3,25) default-SID raw hex on a single log line; heading at the card's top-left. |
+| Amended SIM-TC-032 re-verified (numeric dropdown order) | PASS | Verdict recorded below: pass, 2026-07-19, C. Möllmann. Supporting evidence: scripted DOM check — type options `3 — ST[3] / 17 — ST[17] / custom…`, initial selection ST[17]/1. |
+| Amended SIM-TC-036 re-verified (failure-code column) | PASS | Verdict recorded below: pass, 2026-07-19, C. Möllmann. Supporting evidence: scripted check — failure-code name rendered in the dedicated column on a TM(1,2) row, empty elsewhere. |
+| SIM-TC-034 re-run recorded (SPR-003 closure) | PASS | Full re-run per SPR-003 §2 (the M1c verdict's two visibility steps could not have behaved as recorded); fresh verdict recorded below: pass, 2026-07-19, C. Möllmann. |
 | Existing automated suite green | PASS | `./mvnw verify` green at the baseline commit: 130 tests, 0 failures (tables below); CI green on merged PR #64. |
-| SPR-001…006 closed in the register | PENDING | SPR-002/004/005/006 are terminal (Rejected/converted). SPR-001 and SPR-003 close with the SIM-TC-037 and SIM-TC-034 verdicts above; register update rides in the verdict-recording commit. |
-| SRS M1d-scope requirements all traced+passed | PENDING | Traceability matrix below; TraceabilityCheck M1d gate: 0 findings → OK. SIM-REQ-UI-014 is M-verified — verdict pending. |
+| SPR-001…006 closed in the register | PASS | SPR-002/004/005/006 terminal (Rejected/converted); SPR-001 closed via the SIM-TC-037 verdict, SPR-003 closed via the SIM-TC-034 re-run verdict (register updated in this verdict-recording PR). |
+| SRS M1d-scope requirements all traced+passed | PASS | Traceability matrix below; TraceabilityCheck M1d gate: 0 findings → OK. SIM-REQ-UI-014 is M-verified; verdict pass. |
 
 Per the M1b/M1c precedent, the gate record closes with the commit that records
 the manual verdicts; the `M1d` tag is proposed on that merge commit.
@@ -117,7 +117,7 @@ Per SDP §2.1 tailoring, pus-core is the correctness-critical core (packet layer
 
 | Req ID | Title | Ver. | Scope | SVS Case(s) | Test Method(s) | Verdict |
 |---|---|---|---|---|---|---|
-| SIM-REQ-UI-014 | Causal log order regardless of web-API channel arrival order; equal-OBT TM rows in emission order | M | M1d | SIM-TC-037 | Manual checklist (frontend) | PENDING |
+| SIM-REQ-UI-014 | Causal log order regardless of web-API channel arrival order; equal-OBT TM rows in emission order | M | M1d | SIM-TC-037 | Manual checklist (frontend) | PASS |
 
 Amended SVS cases re-verifying prior requirements at M1d (SCR-006):
 SIM-TC-032 (SIM-REQ-UI-005, SIM-REQ-UI-010 — dropdown ordering),
@@ -141,10 +141,10 @@ Source: `java -cp sim-test-support/target/classes org.satsim.testsupport.trace.T
 
 ## Manual Test Verdicts
 
-To be executed against the running simulator (http://localhost:8090) at the
-baseline commit; verdict + date + name recorded here per SVS.
+Executed against the running simulator (http://localhost:8090) at the
+baseline commit.
 
-### SIM-TC-037 (causal log ordering at equal OBT) — PENDING
+### SIM-TC-037 (causal log ordering at equal OBT) — pass, 2026-07-19, C. Möllmann
 
 Checklist per SVS: fresh simulator; a ping with default ack flags yields,
 top-down in the newest-first log, TM(1,7), TM(17,2), TM(1,1), TC(17,1) — the
@@ -152,27 +152,27 @@ TC row below all its responses despite identical OBT; repeated five times
 without a single inversion; a structured TC(3,1) with interval 50 ms shows its
 TM(1,8) above the TC row. Verifies: SIM-REQ-UI-014. Closes: SPR-001.
 
-### SIM-TC-038 (HMI presentation checklist) — PENDING
+### SIM-TC-038 (HMI presentation checklist) — pass, 2026-07-19, C. Möllmann
 
 Checklist per SVS, viewport ≥ 1440 px wide: the raw hex of a TM(3,25)
 default-SID report renders on a single log line; the "Live packet log"
 heading sits at the top-left of its card, aligned like "Compose TC".
 Verifies: SIM-REQ-UI-002, SIM-REQ-UI-010.
 
-### SIM-TC-032 re-verification (amended: dropdown ordering) — PENDING
+### SIM-TC-032 re-verification (amended: dropdown ordering) — pass, 2026-07-19, C. Möllmann
 
 Checklist per amended SVS: both compose dropdowns list their entries in
 ascending numeric order with the custom… entry last; header orientation and
 OBT clock unchanged. Verifies: SIM-REQ-UI-005, SIM-REQ-UI-010.
 
-### SIM-TC-036 re-verification (amended: failure-code column) — PENDING
+### SIM-TC-036 re-verification (amended: failure-code column) — pass, 2026-07-19, C. Möllmann
 
 Checklist per amended SVS: the TM(1,8) row provoked in SIM-TC-034 (interval
 50 ms) shows the failure-code name ILLEGAL_COLLECTION_INTERVAL in the
 dedicated failure-code column; the column is empty for all other rows.
 Verifies: SIM-REQ-UI-013.
 
-### SIM-TC-034 full re-run (SPR-003 closure) — PENDING
+### SIM-TC-034 full re-run (SPR-003 closure) — pass, 2026-07-19, C. Möllmann
 
 Full checklist per SVS: fresh simulator, all ack flags cleared; selecting
 TC(3,1) replaces the free application-data field with SID/interval/parameter
@@ -223,10 +223,10 @@ active.
 | Item | Status | Evidence |
 |---|---|---|
 | Build + CI green | PASS | `./mvnw verify` green at baseline commit; CI green on merged PRs #62/#63/#64. |
-| In-scope SVS cases implemented and passing | PENDING | SIM-TC-037/038 + amended 032/036 + 034 re-run await manual verdicts. No M2 scope pulled in. |
+| In-scope SVS cases implemented and passing | PASS | SIM-TC-037/038 + amended 032/036 + 034 re-run all manual pass (2026-07-19, C. Möllmann). No M2 scope pulled in. |
 | Test report + traceability matrix generated | PASS | This document (M1d-report.md). Traceability matrix above. |
 | CI gate milestone raised to M1d | PASS | `.github/workflows/ci.yml` runs TraceabilityCheck `--milestone M1d --gate` (this PR). |
-| Milestone tag proposed | PENDING | Tag `M1d` to be proposed on the merge commit of the verdict record (the gate-closing commit), per M1b/M1c precedent. |
+| Milestone tag proposed | PASS | Tag `M1d` proposed on the merge commit of this verdict record (the gate-closing commit), per M1b/M1c precedent; the pushed tag is its own evidence. |
 
 ---
 

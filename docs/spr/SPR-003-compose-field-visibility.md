@@ -1,7 +1,7 @@
 # SPR-003 — Compose form shows all structured HK fields for every type/subtype selection
 
-- Status: Dispositioned — fix (PR #57 review); fix implemented, closure
-  pending SIM-TC-034 re-run
+- Status: Closed (2026-07-19 — SIM-TC-034 full re-run pass at the M1d
+  gate, C. Möllmann; fix PR #61)
 - Severity: minor (display only; encoded packets are unaffected), with a
   verification-escape note on the SIM-TC-034 gate record (§2)
 - Reported: 2026-07-19, project lead (C. Möllmann), manual console use;
@@ -85,5 +85,7 @@ steps.
   guard in `style.css` (fixing PR referencing this SPR). Verified headless
   (Chromium): TC(17,1) selection now shows only the free application-data
   field; structured HK groups hidden.
-- Closure pending: full SIM-TC-034 re-run (M) with verdict recorded in the
-  next milestone report (planned: M1d gate, SCR-006).
+- Closed 2026-07-19: full SIM-TC-034 re-run manual pass at the M1d gate
+  (verdict recorded in docs/test-reports/M1d-report.md, C. Möllmann),
+  superseding the impaired M1c verdict per §2; all checklist steps
+  including the two visibility steps now genuinely exercised.
