@@ -60,8 +60,9 @@ time master**, OBSW targets are stepped slaves via `EmulatorControl` with
 
 ## Working agreement
 
-- One milestone = one session scope. Current target: **M0** (see docs/sdp.md §4
-  for exit criteria). Do not pull M1+ scope into M0 beyond compilable stubs.
+- One milestone = one session scope. The current target is the first
+  milestone in docs/sdp.md §4 without a git tag (tags mark closed
+  milestones). Do not pull later-milestone scope in beyond compilable stubs.
 - Definition of done per milestone: build + CI green, all in-scope SVS cases
   implemented and passing, test report + traceability matrix generated,
   milestone tag proposed.
@@ -79,13 +80,16 @@ time master**, OBSW targets are stepped slaves via `EmulatorControl` with
 - Java 21; Maven is pinned to 3.9.11 via the committed wrapper — always use
   `./mvnw`, never a locally installed `mvn`. No network resources required at
   test time.
-- Static analysis (Checkstyle/SpotBugs) to be wired in M0; the wall-clock ban
-  (rule 2) gets an automated check there.
+- Static analysis (Checkstyle incl. the rule-2 wall-clock forbidden-API
+  check, SpotBugs) runs as part of `verify`.
+- The CI traceability gate (`TraceabilityCheck --milestone <MS> --gate`) is
+  **not** part of local `verify` — run it manually (see
+  `.github/workflows/ci.yml` for the exact invocation) before pushing
+  changes to `@TestCase`/`@Requirement` annotations or SRS/SVS tables.
 
 ## Current state
 
-Bootstrap package: documents complete (drafts), Maven skeleton with interface
-stubs (`SimulationClock`, `EmulatorControl`, `SpaceLink`) and traceability
-annotations. Spring Boot dependencies and the CI workflow do not exist yet —
-both are M0 scope; the module map above describes the target architecture.
-No production logic yet — M0 starts here.
+Determined from the repository, not from this file: closed milestones are
+git tags (`git tag`), scope and exit criteria are in docs/sdp.md §4, the
+gate record per milestone is in docs/test-reports/, and the README Status
+table summarizes both. The default HTTP port is 8090.

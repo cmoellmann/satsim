@@ -20,14 +20,15 @@ field-level breakdown down to the CRC.*
 SatSim is two experiments in one repository:
 
 - **The engineering experiment** — a simulator that speaks strict PUS-C
-  (ECSS-E-ST-70-41C) over CCSDS space packets, built with flight-software
-  discipline: a tailored ECSS process, a byte-level ICD with authoritative
-  reference vectors, spec-first validation, full requirement-to-test
-  traceability, and deterministic replay.
+  (ECSS-E-ST-70-41C) over CCSDS space packets, developed as **Category D
+  ground software** under a tailored ECSS process: a byte-level ICD with
+  authoritative reference vectors, spec-first validation, full
+  requirement-to-test traceability, and deterministic replay.
 - **The methodology experiment** — the development is deliberately
   AI-assisted, under explicit controls: AI proposes, the human decides;
   reference vectors and expected test results are human-approved and
-  *immutable to the AI*; everything enters the baseline via reviewed PR.
+  *immutable to the AI*; everything enters the baseline via reviewed pull
+  request.
   Several of the safeguards, including the immutability rule itself,
   originated as AI proposals that were evaluated and approved by the human.
 
@@ -66,18 +67,20 @@ level — is described in the [Software Design Document](docs/sdd.md).
   pass. This rule has caught real defects: a negative test vector whose stale
   CRC masked the check it existed to verify, found while generating vectors.
 - **Traceability and review obligations are CI gates.** Requirement → SVS
-  case → annotated test is machine-checked on every PR (its first dry-run
-  found a spec gap); missing human review verdicts fail the build (ACT-004).
-  The gate even failed one of its own PRs — and was right.
+  case → annotated test is machine-checked on every pull request (its first
+  dry-run found a spec gap); missing human review verdicts fail the build
+  (ACT-004). The gate even failed one of its own pull requests — and was
+  right.
 - **Determinism is build-enforced.** The wall-clock ban is a Checkstyle
   forbidden-API gate with one sanctioned suppression; the replay test proves
   two identical runs yield SHA-256-identical TM streams.
 - **The on-board software is a plug, not a partner.** Today an in-process
-  loopback, next a native C/Rust demo process, then flight binaries under
+  loopback, next a native C/Rust demo process, then real OBSW binaries under
   instruction-level emulators (QEMU, TSIM, Terma TEMU) — same validation
   suite, unchanged (SIM-REQ-LINK-003).
 - **Change and staffing go through process, not chat.** Scope changes are
-  SCRs with per-document impact analyses, dispositioned by PR review; routine
+  SCRs with per-document impact analyses, dispositioned by pull-request
+  review; routine
   implementation is delegated to cheaper models under committed agent
   definitions with bounded authority, every delegated diff reviewed before
   commit.
@@ -96,7 +99,7 @@ Currently: **93/93 tests green**, pus-core line coverage **95.74 %**
 [SCR-001](docs/scr/SCR-001-st3-housekeeping.md); periodic telemetry flows
 before the user sends anything.
 
-## Document set
+## Document set (ECSS compliant)
 
 | Document | File | What it is |
 |---|---|---|
@@ -116,7 +119,7 @@ before the user sends anything.
 
 - **In-process loopback target only.** No real OBSW binary runs yet — the
   target seam exists precisely for that, but native processes arrive at M3
-  and emulated flight binaries at M5.
+  and emulated OBSW binaries at M5.
 - **Tailored service subset.** ST[17] and the ST[1]
   acceptance/completion subset are live; ST[3] housekeeping is specified but
   not implemented (M1b). TM(1,8) completion-failure reports are dormant until
@@ -134,6 +137,10 @@ before the user sends anything.
   not yet open source; the license decision is tracked and pending.
 - **Coverage target on pus-core only** (SDP §2.1 tailoring); other modules
   are covered by validation tests without a numeric bar.
+- **Lightweight milestone model, not the ECSS review life cycle.** ECSS
+  projects run formal reviews (PDR, CDR, QR, AR, …); this PoC replaces them
+  with lightweight M0–M5 gates — exit criteria plus a committed, auditable
+  gate record per milestone (SDP §4 tailoring).
 
 ## Roadmap & future extensions
 
@@ -160,6 +167,9 @@ growth:
 - **Fault injection** on the space link (drops, corruption, delays).
 - **Commercial instruction-level emulators**: TSIM, Terma TEMU/cOBC.
 - **Multi-APID / multi-spacecraft scenarios.**
+- **A follow-on flight-software project**: applying the same AI-assisted
+  ECSS approach to actual on-board software, raised to **Category B** rigor
+  — the step this ground-software PoC prepares for.
 
 ## Getting started
 
