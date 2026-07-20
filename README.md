@@ -5,9 +5,15 @@
 A satellite simulator with a byte-exact ECSS PUS-C TM/TC interface and a live
 web console, for developing and automatically testing satellite on-board
 software (OBSW). Created **from scratch with AI** (Claude / Claude Code)
-under — and enforcing — the ECSS software development standards
-(ECSS-E-ST-40C, ECSS-Q-ST-80C, tailored): a proof of concept of how
-AI-assisted development and space-grade process discipline work together.
+under — and enforcing — the ECSS software development standards used by ESA
+and the European space industry (ECSS-E-ST-40C, ECSS-Q-ST-80C, tailored):
+a proof of concept of how AI-assisted development and space-grade process
+discipline work together.
+
+> **Not from the space industry?** ECSS, PUS-C and friends are explained in
+> [Translation for other regulated domains](#translation-for-other-regulated-domains)
+> — the mechanisms here map one-to-one onto AI quality, evaluation and
+> compliance practice in any domain where being wrong has consequences.
 
 **▶ [Try it live: satsim.onrender.com](https://satsim.onrender.com)** — one
 shared spacecraft for all visitors: everyone sees the same live log,
@@ -63,6 +69,35 @@ What the PoC covers today:
 
 The as-built architecture — modules, threads, and key flows down to class
 level — is described in the [Software Design Document](docs/sdd.md).
+
+## Translation for other regulated domains
+
+You don't need to know space standards to read this repository. ECSS is the
+European space industry's engineering rulebook — a sibling of DO-178C
+(aviation), ISO 26262 (automotive) and IEC 62304 (medical); PUS-C, the
+TM/TC protocol spoken here, is one chapter of it. Space has spent
+decades codifying how to build software where failure is unacceptable, and it
+turns out those mechanisms answer, almost verbatim, the questions every team
+deploying AI in a regulated environment is asking right now. This project is
+a small, complete, working demonstration of that mapping:
+
+| What this repo calls it | What it is, generically | The AI-engineering equivalent |
+|---|---|---|
+| ICD reference vectors (byte-exact, human-approved) | Ground truth the implementation must reproduce bit-for-bit | An eval golden set that is **immutable to the model** — the AI may never edit expected results to make a test pass; disagreement is a reportable finding |
+| SRS + SVS, spec-first | "Correct" is defined in writing *before* anything is built, with binary pass/fail criteria | Evaluation criteria written before shipping — no post-hoc "looks right" |
+| Requirement → test → verdict traceability (CI-gated) | Every claim of correctness is linked to committed evidence, checked by the build | An audit trail that machines verify on every pull request |
+| SCR / SPR registers | Formal change control and a problem/incident loop: cause analysis, disposition, verified closure | Closing the loop: failures become test cases, changes carry impact analyses |
+| Criticality categories (this PoC: Cat D; flight software: Cat B) | Engineering rigor scaled to the cost of failure | Risk-tiered assurance — the same idea the EU AI Act formalizes for high-risk AI systems |
+| Milestone gates with committed reports | No increment ships without exit criteria met and an auditable record | Quality gates before production, with evidence attached |
+| Determinism replay (SHA-256-identical runs) | Identical inputs must yield identical outputs, cryptographically proven | Reproducibility as a build-enforced property, not an aspiration |
+| CLAUDE.md hard rules + tiered agent staffing | The AI's authority is explicitly bounded; everything enters the baseline via human-reviewed pull request | "Define what the AI cannot do": generous read access, gated write access, human ownership of quality |
+
+The transferable claim of this PoC: **AI-assisted development and rigorous
+process discipline are not in tension — each makes the other affordable.**
+The process gives the AI hard rails it cannot argue its way around; the AI
+makes running a full controlled-document process viable for a single
+engineer. None of the mechanisms above are space-specific. Space just wrote
+them down first.
 
 ## Highlights
 
