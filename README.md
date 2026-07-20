@@ -62,6 +62,11 @@ What the PoC covers today:
 - **A thin web console**: running OBT clock, live packet log with rejection
   rows and field-level detail view, compose form whose hex preview *is* the
   ICD reference vector.
+- **An MCP operator interface**: the TM/TC interface exposed as MCP tools
+  ([ICD §8.4](docs/icd.md)) so an AI agent can operate the spacecraft —
+  with the ICD served as its manual, allowlist and TC budget enforced by
+  the gateway, and every tool call in an OBT-stamped ops log. The AI that
+  built the simulator can be its operator.
 - **Process-isolated OBSW targets** behind two narrow contracts
   (`SpaceLink`, `EmulatorControl`): the entire validation suite must pass
   unchanged against any conforming target — a conformance kit for
@@ -140,8 +145,9 @@ them down first.
 | [`M1c`](https://github.com/cmoellmann/satsim/releases/tag/M1c) | 2026-07-19 | HK compose usability ([SCR-004](docs/scr/SCR-004-hk-compose-usability.md)): structured TC(3,1)/(3,5)/(3,7) compose, interpreted ST[3] TC detail, inline TM(1,2)/(1,8) failure codes | [M1c report](docs/test-reports/M1c-report.md) |
 | [`M1d`](https://github.com/cmoellmann/satsim/releases/tag/M1d) | 2026-07-19 | HMI presentation ([SCR-006](docs/scr/SCR-006-hmi-presentation.md)) from the first [SPR campaign](docs/spr/SPR-LOG.md): causal log ordering, failure-code column, numeric dropdowns, widened layout | [M1d report](docs/test-reports/M1d-report.md) |
 | [`M1e`](https://github.com/cmoellmann/satsim/releases/tag/M1e) | 2026-07-19 | Repository link + mobile usability ([SCR-007](docs/scr/SCR-007-repo-link-mobile.md)): console→repo link, layout reflow down to 360 px viewports with in-card log scrolling | [M1e report](docs/test-reports/M1e-report.md) |
+| [`M1f`](https://github.com/cmoellmann/satsim/releases/tag/M1f) | 2026-07-20 | MCP operator gateway ([SCR-008](docs/scr/SCR-008-mcp-gateway.md)): TM/TC as MCP tools for AI operator clients ([ICD §8.4](docs/icd.md)) — an AI agent flies the spacecraft through the same interface as any operator, demo recorded in the gate report | [M1f report](docs/test-reports/M1f-report.md) |
 
-Currently: **130/130 tests green**, pus-core line coverage **97 %**
+Currently: **135/135 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
 **Next: M2** — TCP length-framed space-packet link (ICD §8), the door for
 external clients and Yamcs.
@@ -199,8 +205,9 @@ and [ECSS-Q-ST-80C Rev.2](https://ecss.nl/standard/ecss-q-st-80c-rev-2-software-
   underneath can jump arbitrarily (that's what the tests do), but the UI
   exposes no fast-forward yet.
 - **No external transport.** The TCP length-framed space-packet link (M2)
-  and Yamcs attachment (M4) are not built yet; today the only way in is
-  REST/WS.
+  and Yamcs attachment (M4) are not built yet; today the ways in are
+  REST/WS and, on top of them, the local MCP gateway (stdio — no
+  network-exposed MCP endpoint yet).
 - **TM/TC definitions are hard-coded, not database-driven.** The service
   tailoring and the default TM(3,25) housekeeping structure live in code
   (with the ICD as the human-readable contract); there is no SCOS-2000 MIB
@@ -229,14 +236,12 @@ Planned increments per [SDP §4](docs/sdp.md), each behind a milestone gate:
 Ideas beyond the current plan — each would enter via SCR, not by quiet scope
 growth:
 
-- **MCP interface — agentic command & control**: expose the TM/TC interface
-  as an [MCP](https://modelcontextprotocol.io) server so an AI agent can
-  operate the spacecraft: compose and send telecommands, monitor live
-  telemetry, react to TM(1,8) failure reports and off-nominal housekeeping
-  values. The AI that built the simulator becomes its operator — with the
-  ICD as its manual and the validation suite as its safety net. Concept
-  sketched in a [design note](docs/notes/mcp-gateway-concept.md)
-  (non-normative, pre-SCR).
+- **Agentic command & control, next steps**: the MCP operator gateway is
+  live since M1f ([SCR-008](docs/scr/SCR-008-mcp-gateway.md), concept in
+  the [design note](docs/notes/mcp-gateway-concept.md)) — open extensions
+  are a network-exposed MCP endpoint for the public demo instance, a
+  separated test-conductor tool namespace (fault injection, time control),
+  and a scenario-based operator-eval harness.
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
 - **Subsystem simulation**: modelled spacecraft subsystems (e.g. power,
