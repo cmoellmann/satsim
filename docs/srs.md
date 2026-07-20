@@ -61,6 +61,11 @@
 | SIM-REQ-HK-002 | For each enabled housekeeping structure, the simulated spacecraft shall emit one TM(3,25) per ICD §9.4 at every collection interval of simulated time per ICD §9.3. | Functional | T | M1b | ICD §9 [SCR-001] |
 | SIM-REQ-HK-003 | The default housekeeping structure SID 1 per ICD §9.6 shall exist with periodic generation enabled at simulation start, without ground commanding. | Functional | T | M1b | ICD §9 [SCR-001] |
 | SIM-REQ-HK-004 | The simulated spacecraft shall enable and disable periodic generation of housekeeping structures upon valid TC(3,5) and TC(3,7) per ICD §9.3. | Functional | T | M1b | ICD §9 [SCR-001] |
+| SIM-REQ-MCP-001 | The mcp-gateway shall expose an MCP server over stdio offering exactly the tools and resources of ICD §8.4 with the semantics defined there; a structured send_tc shall inject octets byte-identical to an ICD §8.1 compose of the same field values. | Functional | T | M1f | ICD §8.4 [SCR-008] |
+| SIM-REQ-MCP-003 | The mcp-gateway shall record received ICD §8.2 tm and rejection frames in an ordered ring buffer and serve them via get_packet_log (cursor-paged) and await_tm (first matching TM, or a distinct timeout result) per ICD §8.4. | Functional | T | M1f | ICD §8.4 [SCR-008] |
+| SIM-REQ-MCP-004 | The mcp-gateway shall serve the ICD text, the current OBT per ICD §8.2 time frames, and its own state (allowlist, remaining TC budget, buffer cursor bounds) as MCP resources per ICD §8.4. | Functional | T | M1f | ICD §8.4 [SCR-008] |
+| SIM-REQ-MCP-005 | The mcp-gateway shall enforce the configured service/subtype allowlist on the decoded content of every injection and the session TC budget on all injections; violating tool calls shall return tool errors and inject nothing. | Functional | T | M1f | ICD §8.4 [SCR-008] |
+| SIM-REQ-MCP-006 | The mcp-gateway shall append every tool invocation, including denied ones, with parameters, outcome and OBT to a JSONL ops log. | Functional | T | M1f | ICD §8.4 [SCR-008] |
 
 ## 2. Non-functional requirements
 
@@ -75,6 +80,7 @@
 | SIM-REQ-QA-001 | Every validation test shall carry @TestCase and @Requirement annotations resolvable against SVS and SRS. | Verifiability | A | M0 | SDP §5 |
 | SIM-REQ-QA-002 | CI shall fail a milestone gate if any SRS requirement in scope lacks a passing validation test (or recorded manual verdict). | Verifiability | A | M0 | SDP §5 |
 | SIM-REQ-QA-003 | A milestone gate shall fail if any in-scope requirement with review verification lacks a recorded review verdict in the milestone test reports, or has a recorded reviewed-FAIL verdict. | Verifiability | A | M1 | SDP §5 [ACT-004] |
+| SIM-REQ-MCP-002 | The mcp-gateway shall interact with the simulator exclusively through the public web API per ICD §8.1/§8.2, behind a link-adapter seam, and shall contain no Spring types and no access to simulator internals. | Design constraint | R | M1f | SCR-008 [ADR-0005] |
 
 ## Change log
 
@@ -88,3 +94,4 @@
 | 1 (draft) | 2026-07-19 | SIM-REQ-UI-011…013 added (HK compose usability package, scope M1c) per SCR-004. |
 | 1 (draft) | 2026-07-19 | SIM-REQ-UI-014 added (causal log ordering, scope M1d) per SCR-006 (from SPR-001). |
 | 1 (draft) | 2026-07-19 | SIM-REQ-UI-015/016 added (repository link, mobile usability, scope M1e) per SCR-007. |
+| 1 (draft) | 2026-07-20 | SIM-REQ-MCP-001…006 added (MCP operator gateway, scope M1f; MCP-002 non-functional) per SCR-008. |
