@@ -5,9 +5,10 @@
 A satellite simulator with a byte-exact ECSS PUS-C TM/TC interface and a live
 web console, for developing and automatically testing satellite on-board
 software (OBSW). Created **from scratch with AI** (Claude / Claude Code)
-under — and enforcing — the ECSS software development standards
-(ECSS-E-ST-40C, ECSS-Q-ST-80C, tailored): a proof of concept of how
-AI-assisted development and space-grade process discipline work together.
+under — and enforcing — the ECSS software development standards used by ESA
+and the European space industry (ECSS-E-ST-40C, ECSS-Q-ST-80C, tailored):
+a proof of concept of how AI-assisted development and space-grade process
+discipline work together.
 
 > **Not from the space industry?** ECSS, PUS-C and friends are explained in
 > [Translation for other regulated domains](#translation-for-other-regulated-domains)
