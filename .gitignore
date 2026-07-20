@@ -4,3 +4,7 @@ target/
 .vscode/
 .DS_Store
 .claude/worktrees/
+# Local-only working files (demo configs, gateway ops logs)
+*.local.json
+*.local.txt
+*.local.jsonl

@@ -278,6 +278,26 @@ structured SID/interval/parameter inputs, whose defaults reproduce the ICD
 reference vector V-TC-03 byte-for-byte in the preview. REST/WebSocket API
 per [ICD §8](docs/icd.md): `POST /api/tc`, WS `/api/tm`.
 
+### Fly it with an AI (MCP)
+
+The repository ships a project-level MCP config (`.mcp.json`): any MCP
+client started in the repo root — Claude Code, for example — gets a
+`satsim` server that launches the operator gateway via `bin/mcp-gateway`
+(first run builds the module). With the simulator running, try:
+
+```
+claude "Consult the satsim ICD resource, ping the spacecraft with full
+acknowledgement, and report the verification chain."
+```
+
+The agent's telecommands appear in the live web console like any other
+operator's — approve each MCP tool call for a go/no-go mission-director
+experience, or allow them and watch. Tool contract: ICD §8.4; authority
+bounds: service allowlist (default ST[3]/ST[17]) and a session TC budget,
+every call recorded in `ops-log.local.jsonl`. A recorded example pass —
+ping chain, induced UNKNOWN_SID fault, diagnosis and recovery — is in the
+[M1f demo transcript](docs/test-reports/M1f-demo-transcript.md).
+
 For a quick tour of the methodology, read
 [ADR-0006](docs/adr/ADR-0006-simulation-time-ownership.md) for a sample of the
 decision process, [SDP §6](docs/sdp.md) for the AI-governance controls, and
