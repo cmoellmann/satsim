@@ -229,6 +229,12 @@ Planned increments per [SDP §4](docs/sdp.md), each behind a milestone gate:
 Ideas beyond the current plan — each would enter via SCR, not by quiet scope
 growth:
 
+- **MCP interface — agentic command & control**: expose the TM/TC interface
+  as an [MCP](https://modelcontextprotocol.io) server so an AI agent can
+  operate the spacecraft: compose and send telecommands, monitor live
+  telemetry, react to TM(1,8) failure reports and off-nominal housekeeping
+  values. The AI that built the simulator becomes its operator — with the
+  ICD as its manual and the validation suite as its safety net.
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
 - **Subsystem simulation**: modelled spacecraft subsystems (e.g. power,
