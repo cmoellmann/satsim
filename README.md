@@ -128,6 +128,27 @@ external clients and Yamcs.
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 
+## References
+
+The standards this project is built under and against. ECSS standards are
+free downloads from [ecss.nl](https://ecss.nl) (registration required);
+CCSDS Blue Books are direct PDFs.
+
+| Standard | Title | Role in SatSim |
+|---|---|---|
+| [ECSS-E-ST-40C](https://ecss.nl/standard/ecss-e-st-40c-software-general-requirements/) | Space engineering — Software (6 Mar 2009) | The software engineering process; tailored for Category D ground software in [SDP §2](docs/sdp.md) |
+| [ECSS-Q-ST-80C Rev.1](https://ecss.nl/standard/ecss-q-st-80c-rev-1-software-product-assurance-15-february-2017/) | Space product assurance — Software product assurance (15 Feb 2017) | Product assurance: the [Software Reuse File](docs/reuse-file.md), SPR handling, review obligations |
+| [ECSS-E-ST-70-41C](https://ecss.nl/standard/ecss-e-st-70-41c-space-engineering-telemetry-and-telecommand-packet-utilization-15-april-2016/) | Telemetry and telecommand packet utilization (15 Apr 2016) | PUS-C — the TM/TC application protocol the [ICD](docs/icd.md) tailors and `pus-core` implements byte-exactly |
+| [CCSDS 133.0-B-2](https://ccsds.org/Pubs/133x0b2e2.pdf) | Space Packet Protocol (Blue Book, Jun 2020) | The space-packet framing underneath PUS: primary header, APID, sequence counts |
+| [CCSDS 301.0-B-4](https://ccsds.org/Pubs/301x0b4e1.pdf) | Time Code Formats (Blue Book, Nov 2010) | CUC — the 4+2 unsegmented time code used for on-board time (ADR-0004) |
+| [ECSS-S-ST-00C](https://ecss.nl/standard/ecss-s-st-00c-rev-2-description-implementation-and-general-requirements-21-november-2025/) | ECSS system — Description, implementation and general requirements | Not cited by the baseline — the entry point if ECSS is new to you: branches, disciplines, tailoring |
+| [ECSS-S-ST-00-01C Rev.1](https://ecss.nl/standard/ecss-s-st-00-01c-rev-1-glossary-of-terms-11-october-2023/) | ECSS system — Glossary of terms (11 Oct 2023) | Not cited by the baseline — the vocabulary (SRS, SVS, ICD, …) this repository uses throughout |
+
+The baseline cites the issues listed above; ECSS has since published
+[ECSS-E-ST-40C Rev.1](https://ecss.nl/standard/ecss-e-st-40c-rev-1-software-30-april-2025/)
+and [ECSS-Q-ST-80C Rev.2](https://ecss.nl/standard/ecss-q-st-80c-rev-2-software-product-assurance-30-april-2025/)
+(both 30 Apr 2025), which supersede them.
+
 ## Current limitations
 
 - **In-process loopback target only.** No real OBSW binary runs yet — the
