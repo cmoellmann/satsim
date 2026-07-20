@@ -234,7 +234,9 @@ growth:
   operate the spacecraft: compose and send telecommands, monitor live
   telemetry, react to TM(1,8) failure reports and off-nominal housekeeping
   values. The AI that built the simulator becomes its operator — with the
-  ICD as its manual and the validation suite as its safety net.
+  ICD as its manual and the validation suite as its safety net. Concept
+  sketched in a [design note](docs/notes/mcp-gateway-concept.md)
+  (non-normative, pre-SCR).
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
 - **Subsystem simulation**: modelled spacecraft subsystems (e.g. power,
