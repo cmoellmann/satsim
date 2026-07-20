@@ -611,7 +611,7 @@ sequenceDiagram
   participant AI as MCP client<br/>(AI operator)
   participant GW as Gateway<br/>(tool handlers)
   participant AUTH as Authority
-  participant LINK as RestWsLink
+  participant ADP as RestWsLink
   participant SIM as Simulator<br/>(web API, own process)
   participant LOG as TmLog<br/>(ring buffer)
   participant OPS as OpsLog
@@ -620,14 +620,14 @@ sequenceDiagram
   AI->>GW: tools/call send_tc {service:17, subtype:1, ackFlags:9}
   GW->>AUTH: vetInjection(17, 1)
   AUTH-->>GW: permitted (budget−1)
-  GW->>LINK: submitStructured(17, 1, 9, "")
-  LINK->>SIM: POST /api/tc (ICD §8.1)
-  SIM-->>LINK: 200 {hex, OBT, seqCount, decoded}
+  GW->>ADP: submitStructured(17, 1, 9, "")
+  ADP->>SIM: POST /api/tc (ICD §8.1)
+  SIM-->>ADP: 200 {hex, OBT, seqCount, decoded}
   GW->>OPS: record(send_tc, params, ok, OBT)
   GW-->>AI: §8.1 response (verbatim)
 
-  SIM--)LINK: WS: tm TM(1,1), tm TM(17,2), tm TM(1,7) (ICD §8.2)
-  LINK->>LOG: accept(frame) ×3 (cursors n, n+1, n+2)
+  SIM--)ADP: WS: tm TM(1,1), tm TM(17,2), tm TM(1,7) (ICD §8.2)
+  ADP->>LOG: accept(frame) ×3 (cursors n, n+1, n+2)
 
   AI->>GW: tools/call await_tm {service:1, subtype:7, timeoutMs, afterCursor}
   GW->>LOG: await(afterCursor, filter tm 1/7, timeout)
