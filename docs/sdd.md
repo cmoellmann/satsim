@@ -110,6 +110,7 @@ The load-bearing ideas, each fixed by an ADR:
 | `pus-core` | CCSDS/PUS-C packet value types + codecs (§3.1) | JDK only | Framework-free forever (CLAUDE.md rule 5); indicative 80% coverage target |
 | `simulator` | Simulation core, OBSW targets, web API, pacing, Spring wiring (§3.2) | `pus-core`, Spring Boot | Only module allowed to contain Spring types |
 | `sim-test-support` | `@Requirement`/`@TestCase` annotations + `TraceabilityCheck` CI tool (§3.3) | JDK only | Test/process scope only, never on a production classpath |
+| `mcp-gateway` | MCP operator gateway (§3.5): TM/TC as MCP tools over stdio for AI operator clients (ICD §8.4, SCR-008) | `pus-core`, MCP Java SDK, Jackson 2 | Spring-free ground-segment client of the web API only — no simulator internals [SIM-REQ-MCP-002] |
 
 The frontend (`simulator/src/main/resources/static/`: `index.html`,
 `app.js`, `style.css`) is plain HTML/JS/CSS served by Spring Boot as static
@@ -395,6 +396,32 @@ and the cards drop their automatic grid min-width — so wide log content
 scrolls within its own container and can never drag the page itself
 beyond the viewport.
 
+### 3.5 `mcp-gateway` — MCP operator gateway (M1f, SCR-008)
+
+Package `org.satsim.mcp`, own process, Spring-free. The MCP client (e.g.
+Claude Code/Desktop) spawns `GatewayMain` and speaks MCP over stdio;
+stdout is the protocol channel, all diagnostics go to stderr. The gateway
+attaches to the simulator exclusively through the ICD §8.1/§8.2 web API
+behind the `WebApiLink` seam [SIM-REQ-MCP-002] — the M2 TCP link would
+join as a second adapter by a later SCR.
+
+| Class | Responsibility |
+|---|---|
+| `GatewayMain` | Entry point: config parsing, wiring, stdio serve; blocks until the MCP client ends the process |
+| `GatewayConfig` | `--url/--allow/--budget/--ops-log/--icd` options; allowlist entries `service` or `service/subtype` |
+| `WebApiLink` | The link-adapter seam: structured/raw/preview submission, §8.2 frame stream [SIM-REQ-MCP-002] |
+| `RestWsLink` | The §8.1/§8.2 adapter on JDK `java.net.http` (HTTP + WebSocket), JSON via Jackson 2 |
+| `TmLog` | Ring buffer of `tm`/`rejection` frames with monotonic cursors; blocking `await` (relative timeouts only — no wall-clock read); OBT per latest `time` frame [SIM-REQ-MCP-003/-004] |
+| `Authority` | Allowlist on decoded injection content (undecodable raw permitted) + session TC budget [SIM-REQ-MCP-005] |
+| `OpsLog` | JSONL record per tool invocation incl. denied ones: tool, params, outcome, OBT [SIM-REQ-MCP-006] |
+| `Gateway` | Assembles the five ICD §8.4 tools and three resources into the MCP server (MCP Java SDK, sync API) [SIM-REQ-MCP-001] |
+
+Validation (SIM-TC-041..045) lives in the `simulator` module's test tree
+(`org.satsim.sim.mcp.McpGatewaySvsTest`): the Spring test context provides
+the deterministically driven simulator, and the gateway under test runs as
+a real child process driven by a scripted `McpSyncClient` over its
+production stdio transport.
+
 ## 4. Runtime view — threads and state ownership
 
 There are exactly three thread roles; **all simulation state has a single
@@ -513,6 +540,7 @@ strictly outside the simulation core.
 | `InteractivePacer` | SIM-REQ-TIME-001 (containment of wall clock) |
 | `web` package + frontend | SIM-REQ-UI-001..013 |
 | `sim-test-support` | SIM-REQ-QA-001..003 |
+| `mcp-gateway` | SIM-REQ-MCP-001..006 |
 
 (Authoritative per-test tracing lives in the generated traceability matrix,
 `docs/test-reports/`; this table is the coarse orientation map.)

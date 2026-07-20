@@ -15,6 +15,7 @@
     <module>sim-test-support</module>
     <module>pus-core</module>
     <module>simulator</module>
+    <module>mcp-gateway</module>
   </modules>
 
   <properties>

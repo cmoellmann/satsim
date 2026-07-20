@@ -12,6 +12,9 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
   (execution back-ends), REST/WebSocket API; serves the static frontend from
   `src/main/resources/static`.
 - `sim-test-support` — `@Requirement` / `@TestCase` annotations for traceability.
+- `mcp-gateway` — MCP operator gateway (ICD §8.4, SCR-008): Spring-free
+  ground-segment client of the simulator web API, exposing TM/TC as MCP
+  tools over stdio for AI operator clients.
 
 ## Authoritative documents (read before implementing)
 

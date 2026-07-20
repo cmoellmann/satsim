@@ -47,6 +47,14 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <!-- SVS SIM-TC-041..045: the MCP operator gateway under test is driven
+           end-to-end (own process, stdio) against this simulator [SCR-008]. -->
+      <groupId>org.satsim</groupId>
+      <artifactId>mcp-gateway</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
