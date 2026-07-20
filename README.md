@@ -16,8 +16,10 @@ discipline work together.
 > compliance practice in any domain where being wrong has consequences.
 
 **▶ [Try it live: satsim.onrender.com](https://satsim.onrender.com)** — one
-shared spacecraft for all visitors: everyone sees the same live log,
-including each other's telecommands. Hosted on a free tier that sleeps when
+shared spacecraft for all visitors: everyone sees the same live telemetry,
+including the spacecraft's responses to each other's telecommands (the
+command packets themselves are visible only in the sending session — the
+web API broadcasts TM and rejections, not TCs). Hosted on a free tier that sleeps when
 idle, so the first visit may take up to a minute to wake the simulator
 (fresh boot, on-board time from zero). The instance always runs the latest
 master that passed the full CI gate.
