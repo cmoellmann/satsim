@@ -1,7 +1,8 @@
 # SCR-008 — MCP operator gateway: agentic command & control (new increment M1f)
 
-- Status: Implemented (spec level) — spec PR #78 (SCR + SDP), second spec
-  PR (ICD Issue 6 §8.4 + SRS + SVS); gateway implementation outstanding
+- Status: Implemented — spec PRs #78 (SCR + SDP) and #80 (ICD Issue 6
+  §8.4 + SRS + SVS); implementation PR #81 (mcp-gateway module, SVS tests
+  SIM-TC-041..045, SRF, CLAUDE.md, SDD). M1f gate record outstanding.
 - Date: 2026-07-20
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ICD, SATSIM-SRS,
