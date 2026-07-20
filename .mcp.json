@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "satsim": {
+      "command": "bash",
+      "args": ["bin/mcp-gateway"]
+    }
+  }
+}

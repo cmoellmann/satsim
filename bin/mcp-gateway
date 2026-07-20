@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# SatSim MCP operator gateway launcher (ICD §8.4, SCR-008).
+#
+# Spawned by MCP clients via .mcp.json. Stdout is the MCP protocol channel:
+# everything this script and the builds it triggers print goes to stderr.
+#
+# Defaults: simulator at http://localhost:8090, ICD served from docs/icd.md,
+# ops log at ops-log.local.jsonl (git-ignored). Any GatewayMain option can be
+# overridden by appending it (later occurrences win), e.g.:
+#   bin/mcp-gateway --url http://localhost:18090 --allow 17 --budget 20
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLASSES="$ROOT/mcp-gateway/target/classes"
+CPFILE="$ROOT/mcp-gateway/target/mcp-gateway-classpath.txt"
+
+if [ ! -d "$CLASSES" ]; then
+  echo "[mcp-gateway] first run: building modules (mvnw install, tests skipped)..." >&2
+  (cd "$ROOT" && ./mvnw -q -DskipTests -Dcheckstyle.skip -Dspotbugs.skip install) >&2
+fi
+
+if [ ! -f "$CPFILE" ] || [ "$ROOT/mcp-gateway/pom.xml" -nt "$CPFILE" ]; then
+  echo "[mcp-gateway] resolving runtime classpath..." >&2
+  (cd "$ROOT" && ./mvnw -q -pl mcp-gateway dependency:build-classpath \
+      -Dmdep.includeScope=runtime -Dmdep.outputFile="$CPFILE") >&2
+fi
+
+exec java -cp "$(cat "$CPFILE"):$CLASSES" org.satsim.mcp.GatewayMain \
+  --url "http://localhost:8090" \
+  --icd "$ROOT/docs/icd.md" \
+  --ops-log "$ROOT/ops-log.local.jsonl" \
+  "$@"
