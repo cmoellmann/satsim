@@ -1,7 +1,7 @@
 # SCR-008 — MCP operator gateway: agentic command & control (new increment M1f)
 
-- Status: Approved (spec PR #78 merged 2026-07-20; ICD/SRS/SVS spec
-  updates follow in a second PR per the SCR-001…003 pattern)
+- Status: Implemented (spec level) — spec PR #78 (SCR + SDP), second spec
+  PR (ICD Issue 6 §8.4 + SRS + SVS); gateway implementation outstanding
 - Date: 2026-07-20
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ICD, SATSIM-SRS,
@@ -101,4 +101,13 @@ chain.
 
 ## 5. Findings during implementation
 
-*(to be completed)*
+- **ICD issue numbering (spec phase):** the ICD was already at Issue 5 —
+  the Issue 5 changes (OP-3 resolution, M1b) had been applied without
+  bumping the configuration-item line, which still read "Issue 4". The
+  §3 impact analysis therefore names the wrong target issue: the MCP
+  section lands as **Issue 6**, §8.4. The stale line was corrected
+  editorially in the same spec PR.
+- **SVS table split (spec phase):** a stray blank line between
+  SIM-TC-038 and SIM-TC-039 (introduced by the SCR-007 spec PR) split
+  the SVS table in rendered markdown; removed editorially in the same
+  spec PR, recorded in the SVS change log.

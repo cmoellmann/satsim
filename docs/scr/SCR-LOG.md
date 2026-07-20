@@ -15,4 +15,4 @@ review) → Implemented (all affected documents updated) | Rejected.
 | SCR-005 | Introduce Software Problem Reports (SPR) as the problem-reporting instrument | Implemented | 2026-07-19 | SDP, CLAUDE.md, README | #54 |
 | SCR-006 | HMI presentation package from SPR dispositions as new increment M1d | Implemented | 2026-07-19 | SDP, SRS, SVS, SPR register | #62 (SCR + SDP + SRS + SVS + SPR register), #64 (frontend implementation + SDD) |
 | SCR-007 | Repository link and mobile usability package as new increment M1e | Implemented | 2026-07-19 | SDP, SRS, SVS | #71 (SCR + SDP + SRS + SVS), #72 (frontend implementation + SDD) |
-| SCR-008 | MCP operator gateway (agentic command & control) as new increment M1f | Approved | 2026-07-20 | SDP, ICD, SRS, SVS, SRF, CLAUDE.md | #78 (SCR + SDP) |
+| SCR-008 | MCP operator gateway (agentic command & control) as new increment M1f | Implemented (spec level) | 2026-07-20 | SDP, ICD, SRS, SVS, SRF, CLAUDE.md | #78 (SCR + SDP), #TBD (ICD Issue 6 §8.4 + SRS + SVS) |
