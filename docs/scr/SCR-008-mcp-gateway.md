@@ -1,8 +1,7 @@
 # SCR-008 — MCP operator gateway: agentic command & control (new increment M1f)
 
-- Status: Proposed (approval = review and merge of this specification PR;
-  ICD/SRS/SVS spec updates follow in a second PR per the SCR-001…003
-  pattern)
+- Status: Approved (spec PR #78 merged 2026-07-20; ICD/SRS/SVS spec
+  updates follow in a second PR per the SCR-001…003 pattern)
 - Date: 2026-07-20
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ICD, SATSIM-SRS,
@@ -97,8 +96,8 @@ chain.
 
 ## 4. Disposition
 
-- [ ] Approved — project lead, via review and merge of this specification
-      PR.
+- [x] Approved — project lead (C. Möllmann), 2026-07-20, via review and
+      merge of specification PR #78.
 
 ## 5. Findings during implementation
 
