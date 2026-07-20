@@ -405,6 +405,75 @@ attaches to the simulator exclusively through the ICD §8.1/§8.2 web API
 behind the `WebApiLink` seam [SIM-REQ-MCP-002] — the M2 TCP link would
 join as a second adapter by a later SCR.
 
+```mermaid
+classDiagram
+  direction LR
+  class GatewayMain {
+    main(args)$
+    wires everything, serves stdio
+  }
+  class GatewayConfig {
+    <<record>>
+    baseUrl, allowlist, budget
+    opsLogPath, icdPath
+    parse(args)$ allows(service, subtype)
+  }
+  class Gateway {
+    buildServer(transport) McpSyncServer
+    tools: send_tc, preview_tc, send_raw_tc,
+    get_packet_log, await_tm
+    resources: icd, obt, gateway-state
+  }
+  class McpSyncServer {
+    <<MCP Java SDK>>
+    stdio transport
+  }
+  class WebApiLink {
+    <<interface>>
+    submitStructured() submitRaw() preview()
+    start(frameListener)
+  }
+  class RestWsLink {
+    JDK HttpClient + WebSocket
+    POST /api/tc, /api/tc/preview
+    WS /api/tm
+  }
+  class TmLog {
+    ring buffer, monotonic cursors
+    accept(frame) after(cursor, filter)
+    await(cursor, filter, timeout)
+    obt()
+  }
+  class Authority {
+    vetInjection(service, subtype)
+    remaining()
+  }
+  class OpsLog {
+    record(tool, params, outcome, obt)
+  }
+  class Simulator {
+    <<separate Spring Boot process>>
+    web API per ICD §8.1 / §8.2
+  }
+
+  GatewayMain ..> GatewayConfig : parse(args)
+  GatewayMain ..> Gateway : wires
+  Gateway --> McpSyncServer : builds
+  Gateway --> WebApiLink : injections
+  Gateway --> TmLog : query/await
+  Gateway --> Authority : vet
+  Gateway --> OpsLog : every tool call
+  WebApiLink <|.. RestWsLink
+  RestWsLink --> Simulator : HTTP (TC in)
+  Simulator ..> RestWsLink : WS frames (tm, rejection, time)
+  RestWsLink ..> TmLog : accept(frame)
+```
+
+The MCP client (left of the diagram, not shown) spawns `GatewayMain` and
+owns its lifetime; the simulator is a separate process reached only over
+HTTP/WS. The dashed WS path is the single source of everything the
+gateway knows about the spacecraft.
+
 | Class | Responsibility |
 |---|---|
 | `GatewayMain` | Entry point: config parsing, wiring, stdio serve; blocks until the MCP client ends the process |
@@ -528,6 +597,50 @@ Validation tests build `PusSimulatedObsw` + `LoopbackTarget` +
 simulated times yield byte-identical TM streams (SIM-TC-011,
 `DeterminismReplayTest`). This works *because* wall clock and pacing are
 strictly outside the simulation core.
+
+### 5.5 MCP operator round trip — send_tc → await_tm (M1f)
+
+An AI operator pings the spacecraft and waits for the completion report.
+Everything left of the simulator lives in the gateway process; the
+simulator behaves exactly as in §5.2 — it cannot tell an AI operator from
+the browser frontend.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant AI as MCP client<br/>(AI operator)
+  participant GW as Gateway<br/>(tool handlers)
+  participant AUTH as Authority
+  participant LINK as RestWsLink
+  participant SIM as Simulator<br/>(web API, own process)
+  participant LOG as TmLog<br/>(ring buffer)
+  participant OPS as OpsLog
+
+  note over AI,GW: MCP over stdio — the client spawned the gateway
+  AI->>GW: tools/call send_tc {service:17, subtype:1, ackFlags:9}
+  GW->>AUTH: vetInjection(17, 1)
+  AUTH-->>GW: permitted (budget−1)
+  GW->>LINK: submitStructured(17, 1, 9, "")
+  LINK->>SIM: POST /api/tc (ICD §8.1)
+  SIM-->>LINK: 200 {hex, OBT, seqCount, decoded}
+  GW->>OPS: record(send_tc, params, ok, OBT)
+  GW-->>AI: §8.1 response (verbatim)
+
+  SIM--)LINK: WS: tm TM(1,1), tm TM(17,2), tm TM(1,7) (ICD §8.2)
+  LINK->>LOG: accept(frame) ×3 (cursors n, n+1, n+2)
+
+  AI->>GW: tools/call await_tm {service:1, subtype:7, timeoutMs, afterCursor}
+  GW->>LOG: await(afterCursor, filter tm 1/7, timeout)
+  LOG-->>GW: entry {cursor n+2, TM(1,7) frame}
+  GW->>OPS: record(await_tm, params, ok, OBT)
+  GW-->>AI: {cursor, kind:"tm", frame}
+```
+
+The denied path short-circuits at step 2: `Authority` returns the denial,
+the tool result is an MCP error, nothing reaches `RestWsLink` — and the
+ops log still gets its record. On timeout, `await_tm` returns the distinct
+`{"timedOut": true}` result (a normal result, not an error), so the
+operator can distinguish "no such TM yet" from "tool failed".
 
 ## 6. Requirements allocation (component → SRS)
 
