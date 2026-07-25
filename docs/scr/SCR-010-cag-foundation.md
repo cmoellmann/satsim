@@ -6,7 +6,8 @@
 - Date: 2026-07-25
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ADR (ADR-0007 +
-  DECISION-LOG), SATSIM-SRS, SATSIM-SVS, SATSIM-SDD, CLAUDE.md
+  DECISION-LOG), SATSIM-SRF (§1a, Erratum E1), SATSIM-SRS, SATSIM-SVS,
+  SATSIM-SDD, CLAUDE.md
 - Design basis: [ADR-0007](../adr/ADR-0007-command-authorization-gate.md)
   (Proposed with this SCR); increment plan `satsim_agent_increment_plan.md`
   Rev 3 (non-normative handover; the decisions here and in ADR-0007 govern
@@ -109,4 +110,20 @@ direct-REST bypass test, and the AI-mediated independence experiment — all
 
 ## 5. Findings during implementation
 
-*(to be completed)*
+- **F-1 (2026-07-25) — classification error in ADR-0007, corrected by erratum.**
+  A delta review (from a parallel design session) caught that ADR-0007 as first
+  drafted called the AI operator agent a "Category D" component of *this project*.
+  That is a category error: the agent loop runs entirely inside third-party MCP
+  client software (Claude Code today, any conforming client in principle) and the
+  repository contains **no model call anywhere** (verified by source grep).
+  Software this project did not write and cannot inspect is not a CI of this
+  project — under ECSS-Q-ST-80C it is third-party software, recorded in the SRF,
+  **untrusted by construction, no criticality claim**. Disposition: **erratum in
+  place** on ADR-0007 (**Erratum E1**), permissible because the ADR is Accepted
+  but not yet baselined at the M1h tag and no decision is reversed; new SRF §1a
+  row + change-log entry added. The correction *strengthens* the containment
+  argument (bounding a non-inspectable black box). A project-owned **reference
+  operator client** (a classifiable Cat D CI that would make client-agnostic CAG
+  enforcement verifiable — the operator-side twin of SIM-REQ-LINK-003, speaking
+  MCP) was considered and **deferred as a named future extension** (README
+  roadmap; would enter via its own SCR), not pulled into M1h/M1i scope.

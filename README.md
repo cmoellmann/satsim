@@ -240,10 +240,19 @@ growth:
 
 - **Agentic command & control, next steps**: the MCP operator gateway is
   live since M1f ([SCR-008](docs/scr/SCR-008-mcp-gateway.md), concept in
-  the [design note](docs/notes/mcp-gateway-concept.md)) — open extensions
-  are a network-exposed MCP endpoint for the public demo instance, a
-  separated test-conductor tool namespace (fault injection, time control),
-  and a scenario-based operator-eval harness.
+  the [design note](docs/notes/mcp-gateway-concept.md)); hardening it into a
+  verifiable **Command Authorization Gate** engineered to the ECSS Category B
+  technical bar is planned ([ADR-0007](docs/adr/ADR-0007-command-authorization-gate.md),
+  [SCR-010](docs/scr/SCR-010-cag-foundation.md), increments M1h/M1i). Open
+  extensions are a network-exposed MCP endpoint for the public demo instance,
+  a separated test-conductor tool namespace (fault injection, time control),
+  a scenario-based operator-eval harness, and a **project-owned reference
+  operator client** — a small hand-written agent loop (speaking MCP) that
+  would make client-agnostic gate enforcement verifiable (the operator-side
+  twin of the "any conforming target" rule, `SIM-REQ-LINK-003`) and make the
+  eval scenarios scriptable in CI. Today's operator client (Claude Code / any
+  MCP client) is untrusted third-party software by construction — the gate,
+  not the agent, carries the assurance.
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
 - **Subsystem simulation**: modelled spacecraft subsystems (e.g. power,

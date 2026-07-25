@@ -11,11 +11,32 @@
   SCR-009 (shared-traffic console, M1g)
 - Supersedes: —
 
+> **Erratum E1 (2026-07-25 — pre-M1h-baseline correction; recorded as a finding
+> in SCR-010 §5).** As first drafted, this ADR called the AI operator agent a
+> "Category D" component of *this project*. That is a classification error. The
+> agent loop (compose messages + tool definitions, receive `tool_use`, execute,
+> iterate, terminate) runs entirely inside third-party software — today Claude
+> Code, tomorrow any MCP client — and the repository contains **no model call
+> anywhere** (verified). Software this project did not write and cannot inspect is
+> not a configuration item of this project: under ECSS-Q-ST-80C it is
+> **third-party / reused software**, recorded in the Software Reuse File
+> (`docs/reuse-file.md`), **untrusted by construction, with no criticality claim.**
+> This *strengthens* the containment argument — bounding a non-inspectable black
+> box with a Category-B-engineered gate is more compelling than bounding an agent
+> we wrote ourselves. **Read every "the agent is Category D" phrasing below as
+> "the agent is untrusted third-party software (SRF), not a CI of this project."**
+> Corrected in place because this ADR is Accepted but not yet baselined at the
+> M1h tag (per the Status line and the DECISION-LOG baseline rule); no decision is
+> reversed. A project-owned *reference* operator client — which *could* be
+> Category D and would make client-agnostic CAG enforcement verifiable (the
+> operator-side twin of SIM-REQ-LINK-003) — is recorded as a **deferred future
+> extension** (README roadmap; would enter via its own SCR) and would speak MCP.
+
 ## Context and Problem Statement
 
-SCR-008 (M1f) added the MCP operator gateway: a Category D AI agent can now
-submit telecommands to the spacecraft through the same web API a human operator
-uses. SCR-008 §3 anticipated this decision — *"if review judges the
+SCR-008 (M1f) added the MCP operator gateway: a third-party AI agent (the MCP
+client, e.g. Claude Code) can now submit telecommands to the spacecraft through
+the same web API a human operator uses. SCR-008 §3 anticipated this decision — *"if review judges the
 operator-boundary decisions architecture-shaping, an ADR-0007 may be proposed."*
 It is, and this is that ADR.
 
@@ -67,7 +88,8 @@ product to an assurance level its nature does not warrant?**
 ## Considered Options
 
 - **Option A — Per-configuration-item classification with a Command Authorization
-  Gate (CAG).** Keep the agent Category D (advisory). Extract a small, deterministic,
+  Gate (CAG).** Keep the agent outside this project's CI scope — untrusted
+  third-party software (SRF), advisory only (Erratum E1). Extract a small, deterministic,
   dependency-free **CAG** that decodes every TC, classifies it by content, decides
   (forward / reject / HOLD-for-confirmation), and logs — engineered to the
   Category B *technical* bar. One product, per-CI criticality.
@@ -101,7 +123,9 @@ MCP client is attached or how it is configured.
 **Option A is adopted.** SatSim remains one Category D product; within it, the
 **Command Authorization Gate (CAG)** is classified and engineered to the **Category
 B technical bar**, recorded as a per-configuration-item classification in the SDP.
-The AI agent remains **Category D** (advisory, unverifiable by nature).
+The AI agent is **not a CI of this project**: it is untrusted third-party software
+(recorded in the SRF), advisory and unverifiable by nature, with **no criticality
+claim** (Erratum E1).
 
 **Framing (binding wording for SDP and derived documents):** "Category B" here
 names the **engineering rigor** applied to the CAG — hazard analysis, software
@@ -152,7 +176,8 @@ made.
 
 Contained by a content-based CAG: **the agent proposing a command type it has no
 authority for.** Fully bounded, deterministically. For that failure class,
-Category D for the agent is sound.
+treating the agent as untrusted (no criticality claim) is sound — the gate, not
+the agent, carries the assurance.
 
 **Not contained:**
 
