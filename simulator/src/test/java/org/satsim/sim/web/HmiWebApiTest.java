@@ -152,6 +152,12 @@ class HmiWebApiTest {
     assertEquals("CRC_ERROR", broken.getBody().get("decodeError"));
     assertNull(broken.getBody().get("decoded"));
     assertFalse(broken.getBody().containsKey("sequenceCount"));
+
+    // Amended per SCR-009: every response carries the ICD §8.1 injectionId,
+    // strictly increasing across all injections (value contract: SIM-TC-046).
+    assertEquals(0, ((Number) first.getBody().get("injectionId")).longValue());
+    assertEquals(1, ((Number) second.getBody().get("injectionId")).longValue());
+    assertEquals(2, ((Number) broken.getBody().get("injectionId")).longValue());
   }
 
   /**
@@ -173,17 +179,25 @@ class HmiWebApiTest {
       // periodic SID 1 report.
       rest.postForEntity("/api/tc", Map.of("hex", V_TC_01_BROKEN_CRC_HEX), Map.class);
       simulation.advanceBy(500_000_000L);
-      List<JsonNode> frames = drainFrames(collector, 6);
+      // 7 frames: the tc frame of the injection (M1g), its rejection frame
+      // and 5 time frames at the 100 ms quantum.
+      List<JsonNode> frames = drainFrames(collector, 7);
       List<JsonNode> rejections = byKind(frames, "rejection");
       assertEquals(1, rejections.size(), "exactly one rejection frame expected");
       assertEquals("NOT_A_PACKET", rejections.get(0).get("reason").asText());
       assertEquals(V_TC_01_BROKEN_CRC_HEX, rejections.get(0).get("hex").asText());
       assertEquals(0, rejections.get(0).get("timeCoarse").asLong());
       assertTrue(byKind(frames, "tm").isEmpty(), "a discarded TC must not produce TM");
+      // Amended per SCR-009: the injection is also observable as a tc frame.
+      List<JsonNode> tcFrames = byKind(frames, "tc");
+      assertEquals(1, tcFrames.size(), "exactly one tc frame per injection expected");
+      assertEquals(V_TC_01_BROKEN_CRC_HEX, tcFrames.get(0).get("hex").asText());
 
       rest.postForEntity("/api/tc", Map.of("service", 2, "subtype", 1), Map.class);
       simulation.advanceBy(QUANTUM_NANOS);
-      List<JsonNode> more = drainFrames(collector, 2);
+      // 4 frames: tc, rejection, TM(1,2) and one time frame.
+      List<JsonNode> more = drainFrames(collector, 4);
+      assertEquals(1, byKind(more, "tc").size(), "exactly one tc frame per injection expected");
       List<JsonNode> moreRejections = byKind(more, "rejection");
       assertEquals(1, moreRejections.size(), "exactly one rejection frame expected");
       assertEquals("ILLEGAL_SERVICE_OR_SUBTYPE", moreRejections.get(0).get("reason").asText());

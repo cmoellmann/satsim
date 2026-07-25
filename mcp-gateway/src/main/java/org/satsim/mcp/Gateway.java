@@ -140,13 +140,15 @@ public final class Gateway {
 
   private SyncToolSpecification getPacketLog() {
     return tool("get_packet_log",
-        "Ordered ICD §8.2 tm/rejection records from the gateway ring buffer, each "
-            + "with a monotonic cursor; paged from afterCursor (default: buffer start).",
+        "Ordered ICD §8.2 tm/rejection/tc records from the gateway ring buffer, each "
+            + "with a monotonic cursor; paged from afterCursor (default: buffer start). "
+            + "tc records are the telecommands injected by any operator, including "
+            + "other consoles and gateways.",
         Map.of("type", "object",
             "properties", Map.of(
                 "afterCursor", Map.of("type", "integer",
                     "description", "return records with cursor greater than this (default 0)"),
-                "kind", Map.of("type", "string", "enum", List.of("tm", "rejection")),
+                "kind", Map.of("type", "string", "enum", List.of("tm", "rejection", "tc")),
                 "service", Map.of("type", "integer"),
                 "subtype", Map.of("type", "integer")),
             "required", List.of()),

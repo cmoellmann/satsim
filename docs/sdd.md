@@ -319,11 +319,11 @@ classDiagram
 
 | Class | Responsibility | Notes |
 |---|---|---|
-| `SimulationService` | **The bridge between the multi-threaded web world and the single-threaded simulation** (§4). Marshals every operation onto the `sim-master` thread; encodes structured TC submissions (or passes raw hex verbatim so negative vectors reach the spacecraft side); publishes tm/time/rejection frames (ICD §8.2) as JSON via the broadcaster [SIM-REQ-UI-003, -005, -007] | Also owns the **ground-side** TC sequence counter (ICD §2: TC counted by ground, wrap 16383) — deliberately separate from the spacecraft-side counters in the simulated OBSW. `advanceBy` chunks advances at the 100 ms *simulated* time-frame quantum, so the time-frame cadence is deterministic however callers slice their advances. `sendTc` returns the enriched ICD §8.1 response (`TcSendResponse`); `previewTc` encodes without injecting and without consuming a sequence count [SIM-REQ-UI-004, -006] |
+| `SimulationService` | **The bridge between the multi-threaded web world and the single-threaded simulation** (§4). Marshals every operation onto the `sim-master` thread; encodes structured TC submissions (or passes raw hex verbatim so negative vectors reach the spacecraft side); publishes tm/time/rejection/tc frames (ICD §8.2) as JSON via the broadcaster [SIM-REQ-UI-003, -005, -007, -017] | Also owns the **ground-side** TC sequence counter (ICD §2: TC counted by ground, wrap 16383) — deliberately separate from the spacecraft-side counters in the simulated OBSW. `advanceBy` chunks advances at the 100 ms *simulated* time-frame quantum, so the time-frame cadence is deterministic however callers slice their advances. `sendTc` returns the enriched ICD §8.1 response (`TcSendResponse`); `previewTc` encodes without injecting, without consuming a sequence count and without assigning an injection id [SIM-REQ-UI-004, -006]. From M1g it also owns the `injectionId` counter and broadcasts the `tc` frame **before** handing the packet to the scheduler, so the ICD §8.2 ordering guarantee (tc precedes every frame it causes) holds by construction on the single sim thread [SIM-REQ-UI-017, SCR-009] |
 | `TcController` | Thin REST façade: `POST /api/tc` (inject, returns injected hex), `POST /api/tc/preview` (encode only) | `IllegalArgumentException` → HTTP 400 with error message |
 | `TmWebSocketHandler` | Session registry + broadcaster for WS `/api/tm`: every frame goes to every connected session as one JSON text frame [SIM-REQ-UI-002] | Dead sessions dropped on send failure. A connect hook (registered by `SimulationService`) sends the current OBT as a time frame to each new session [SIM-REQ-UI-005] |
-| `TmFrame`, `TimeFrame`, `RejectionFrame` | The WS wire DTOs, discriminated by `kind` (ICD §8.2): TM (hex + decoded fields), current OBT, rejection diagnostics | `TmFrame.decoded == null` only if an emitted TM fails to decode — that is logged as a defect, never silent |
-| `TcSendResponse` (+ `.Decoded`) | The `POST /api/tc` response DTO (ICD §8.1): hex, injection OBT, sequence count, decoded TC fields or `decodeError` [SIM-REQ-UI-006] | Null fields omitted from JSON (`decodeError` only for undecodable raw injections) |
+| `TmFrame`, `TimeFrame`, `RejectionFrame`, `TcFrame` | The WS wire DTOs, discriminated by `kind` (ICD §8.2): TM (hex + decoded fields), current OBT, rejection diagnostics, and (M1g) the uplink observation frame built from the §8.1 response of an injection | `TmFrame.decoded == null` only if an emitted TM fails to decode — that is logged as a defect, never silent. `TcFrame.of(TcSendResponse)` is the single construction path, so frame and response cannot drift apart |
+| `TcSendResponse` (+ `.Decoded`) | The `POST /api/tc` response DTO (ICD §8.1): hex, injection OBT, sequence count, decoded TC fields or `decodeError`, and the `injectionId` correlating it with the §8.2 `tc` frame [SIM-REQ-UI-006, -017] | Null fields omitted from JSON (`decodeError` only for undecodable raw injections) |
 | `TcSubmission` | The request DTO: either `hex` (raw injection) or `service`/`subtype` (+ optional `ackFlags`, `appDataHex`) [SIM-REQ-UI-001] | |
 | `WebSocketConfig` | Registers the handler at `/api/tm` | |
 
@@ -357,9 +357,15 @@ dropdown TC compose from the tailored service set with custom free-entry and
 debounced live hex preview via `POST /api/tc/preview` [SIM-REQ-UI-004, -010]
 — dropdowns listed in ascending numeric order independent of declaration
 order, custom… last, initial selection ST[17] ping (SCR-006); TC submission
-(structured, one-click ping, raw hex injection) with rows built from the
-enriched ICD §8.1 response [SIM-REQ-UI-006]; a live packet log fed by the
-`/api/tm` WebSocket (frame kinds tm/time/rejection, automatic reconnect,
+(structured, one-click ping, raw hex injection); from M1g **TC rows are
+built from the §8.2 `tc` broadcast only, never from the §8.1 response** —
+each injection therefore appears exactly once, and rows whose `injectionId`
+this console never received from a submission of its own are marked
+`remote` (another console, an MCP operator gateway) [SIM-REQ-UI-006, -018,
+SCR-009]; because the simulator broadcasts before it responds, a frame
+arriving while own submissions are still in flight is held back until their
+ids are known, rather than mislabelled; a live packet log fed by the
+`/api/tm` WebSocket (frame kinds tm/time/rejection/tc, automatic reconnect,
 capped at 200 rows) with kind/service filters, clear and pause buffering
 [SIM-REQ-UI-002, -007, -008] — rows are not appended in arrival order but
 **sort-inserted** newest-first by full-precision on-board time with a
@@ -480,12 +486,12 @@ gateway knows about the spacecraft.
 | `GatewayConfig` | `--url/--allow/--budget/--ops-log/--icd` options; allowlist entries `service` or `service/subtype` |
 | `WebApiLink` | The link-adapter seam: structured/raw/preview submission, §8.2 frame stream [SIM-REQ-MCP-002] |
 | `RestWsLink` | The §8.1/§8.2 adapter on JDK `java.net.http` (HTTP + WebSocket), JSON via Jackson 2 |
-| `TmLog` | Ring buffer of `tm`/`rejection` frames with monotonic cursors; blocking `await` (relative timeouts only — no wall-clock read); OBT per latest `time` frame [SIM-REQ-MCP-003/-004] |
+| `TmLog` | Ring buffer of `tm`/`rejection`/`tc` frames with monotonic cursors (the `tc` records, M1g, make other operators' commanding visible to the AI operator); blocking `await` (relative timeouts only — no wall-clock read); OBT per latest `time` frame [SIM-REQ-MCP-003/-004] |
 | `Authority` | Allowlist on decoded injection content (undecodable raw permitted) + session TC budget [SIM-REQ-MCP-005] |
 | `OpsLog` | JSONL record per tool invocation incl. denied ones: tool, params, outcome, OBT [SIM-REQ-MCP-006] |
 | `Gateway` | Assembles the five ICD §8.4 tools and three resources into the MCP server (MCP Java SDK, sync API) [SIM-REQ-MCP-001] |
 
-Validation (SIM-TC-041..045) lives in the `simulator` module's test tree
+Validation (SIM-TC-041..046) lives in the `simulator` module's test tree
 (`org.satsim.sim.mcp.McpGatewaySvsTest`): the Spring test context provides
 the deterministically driven simulator, and the gateway under test runs as
 a real child process driven by a scripted `McpSyncClient` over its
@@ -544,11 +550,13 @@ sequenceDiagram
   C->>S: sendTc(submission)
   S->>M: submit(encode + inject), block ≤5 s
   M->>M: TcPacket.of(APID 100, groundSeq++, …).encode()
+  M->>W: broadcast(TcFrame JSON, injectionId n)
+  W-->>B: WS frame → TC row appears in every console
   M->>SCH: injectTc(bytes)
   SCH->>T: sendTc(bytes) — queued, due = localNanos + 0
   M-->>S: injected hex
-  S-->>B: {"hex": "1864C000…"}
-  Note over B: TC row appears in log
+  S-->>B: {"hex": "1864C000…", "injectionId": n}
+  Note over B: own row already there — id n recognized, no duplicate
 
   Note over M: next pacer tick (≤20 ms wall later)
   M->>SCH: advanceBy(20 ms)
@@ -574,9 +582,12 @@ injection-time CUC — which is what the ICD §6 reference vectors pin down.
 
 Alongside TM, the same WebSocket carries `time` frames (published inside
 `advanceBy` at every completed 100 ms of simulated time, plus once per
-session on connect) and `rejection` frames (pushed by the simulated OBSW's
+session on connect), `rejection` frames (pushed by the simulated OBSW's
 rejection listener at the simulated instant of rejection) — see ICD §8.2
-(SCR-003).
+(SCR-003) — and, from M1g, the `tc` frame of every injection, emitted on the
+sim thread before the packet reaches the scheduler (SCR-009). The broadcast
+is what makes the console *shared*: a command sent from any console, `curl`
+or MCP gateway shows up in all of them, the foreign ones marked `remote`.
 
 ### 5.3 TC rejection
 

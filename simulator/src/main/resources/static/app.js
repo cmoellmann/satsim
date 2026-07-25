@@ -233,9 +233,9 @@ function applyFilters() {
 // the rejection and TM rows it caused.
 const KIND_RANK = { TC: 0, REJ: 1, TM: 2 };
 
-function addRow(kind, obt, timeSeconds, type, seq, ctr, failure, hex, service, detail) {
+function addRow(kind, obt, timeSeconds, type, seq, ctr, failure, hex, service, detail, remote) {
   const row = document.createElement("tr");
-  row.className = kind.toLowerCase();
+  row.className = remote ? `${kind.toLowerCase()} remote` : kind.toLowerCase();
   row.dataset.kind = kind;
   row.dataset.service = service === null || service === undefined ? "" : String(service);
   row.dataset.detail = JSON.stringify(detail);
@@ -252,6 +252,14 @@ function addRow(kind, obt, timeSeconds, type, seq, ctr, failure, hex, service, d
   pill.className = `badge ${kind.toLowerCase()}`;
   pill.textContent = kind;
   badge.appendChild(pill);
+  // Telecommands of other operators (other consoles, MCP gateways) are marked
+  // as such; own rows stay unmarked (SIM-REQ-UI-018, SCR-009).
+  if (remote) {
+    const remotePill = document.createElement("span");
+    remotePill.className = "badge remote-tag";
+    remotePill.textContent = "remote";
+    badge.appendChild(remotePill);
+  }
   row.appendChild(badge);
   for (const value of [obt, type, seq, ctr]) {
     const cell = document.createElement("td");
@@ -610,66 +618,101 @@ $("compose-form").addEventListener("input", schedulePreview);
 
 // --- Sending (SIM-REQ-UI-001/006) ---
 
-function addTcRow(response, fallbackLabel) {
-  updateObt(response.timeSeconds);
-  const decoded = response.decoded;
-  const label = decoded ? `TC(${decoded.service},${decoded.subtype})` : fallbackLabel;
+// TC rows are rendered from the ICD §8.2 tc broadcast only — never from the
+// §8.1 response — so every injection appears exactly once, whether this
+// console sent it or another operator did (SIM-REQ-UI-018, SCR-009). The
+// injectionIds of own submissions are collected here; a tc frame carrying an
+// id that is not among them came from elsewhere and is marked remote.
+const ownInjections = new Set();
+let injectionsInFlight = 0;
+const deferredTcFrames = [];
+
+/**
+ * Submits an injection and remembers its injectionId. The simulator
+ * broadcasts before it responds, so the frame for this very injection can
+ * arrive while the POST is still in flight — hence the deferral below.
+ */
+async function inject(body) {
+  injectionsInFlight++;
+  try {
+    const response = await post("/api/tc", body);
+    ownInjections.add(response.injectionId);
+    return response;
+  } finally {
+    injectionsInFlight--;
+    flushDeferredTcFrames();
+  }
+}
+
+function flushDeferredTcFrames() {
+  if (injectionsInFlight > 0) {
+    return;
+  }
+  while (deferredTcFrames.length > 0) {
+    renderTcFrame(deferredTcFrames.shift());
+  }
+}
+
+// Unknown id + own injection still in flight ⇒ origin not yet decidable;
+// hold the frame back rather than mislabel an own TC as remote.
+function handleTcFrame(frame) {
+  if (!ownInjections.has(frame.injectionId) && injectionsInFlight > 0) {
+    deferredTcFrames.push(frame);
+    return;
+  }
+  renderTcFrame(frame);
+}
+
+function renderTcFrame(frame) {
+  const own = ownInjections.delete(frame.injectionId);
+  updateObt(frame.timeSeconds);
+  const decoded = frame.decoded;
   addRow(
     "TC",
-    response.timeSeconds.toFixed(3),
-    response.timeSeconds,
-    label,
-    response.sequenceCount === undefined ? "" : String(response.sequenceCount),
+    frame.timeSeconds.toFixed(3),
+    frame.timeSeconds,
+    decoded ? `TC(${decoded.service},${decoded.subtype})` : "undecodable",
+    frame.sequenceCount === undefined ? "" : String(frame.sequenceCount),
     "",
     "",
-    response.hex,
+    frame.hex,
     decoded ? decoded.service : null,
-    tcDetail(response),
+    tcDetail(frame),
+    !own,
   );
 }
 
-async function sendCompose() {
+async function send(body, failureLabel) {
   try {
-    const response = await post("/api/tc", composeBody());
-    addTcRow(response, "TC(?)");
+    await inject(body);
     showError("");
   } catch (error) {
-    showError(`Send failed: ${error.message}`);
+    showError(`${failureLabel}: ${error.message}`);
   }
 }
 
 $("compose-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  sendCompose();
+  send(composeBody(), "Send failed");
 });
 
-$("ping").addEventListener("click", async () => {
-  try {
-    const response = await post("/api/tc",
-        { service: 17, subtype: 1, ackFlags: ackFlags(), appDataHex: "" });
-    addTcRow(response, "TC(17,1)");
-    showError("");
-  } catch (error) {
-    showError(`Ping failed: ${error.message}`);
-  }
-});
+$("ping").addEventListener("click", () =>
+    send({ service: 17, subtype: 1, ackFlags: ackFlags(), appDataHex: "" }, "Ping failed"));
 
-$("raw-form").addEventListener("submit", async (event) => {
+$("raw-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  try {
-    const response = await post("/api/tc", { hex: $("raw-hex").value.trim() });
-    addTcRow(response, "raw");
-    showError("");
-  } catch (error) {
-    showError(`Injection failed: ${error.message}`);
-  }
+  send({ hex: $("raw-hex").value.trim() }, "Injection failed");
 });
 
-// --- WebSocket TM/time/rejection stream (ICD §8.2) ---
+// --- WebSocket TM/time/rejection/tc stream (ICD §8.2) ---
 
 function handleFrame(frame) {
   if (frame.kind === "time") {
     updateObt(frame.timeSeconds);
+    return;
+  }
+  if (frame.kind === "tc") {
+    handleTcFrame(frame);
     return;
   }
   if (frame.kind === "rejection") {
