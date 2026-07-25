@@ -13,6 +13,7 @@ Baseline rule: ADRs are immutable once Accepted and baselined (Git tag); changes
 | ADR-0004 | On-board time: CUC 4+2, agency epoch, implicit P-field | Accepted | 2026-07-12 | CCSDS CUC with 4 coarse + 2 fine octets, agency-defined epoch documented in the ICD, P-field not transmitted. Time is sourced exclusively from the `SimulationClock` abstraction, never from wall clock directly. |
 | ADR-0005 | Thin own web frontend now; Yamcs-ready TCP packet link | Accepted | 2026-07-12 | Plain HTML/JS + WebSocket frontend served by Spring Boot for the PoC. Simulator additionally exposes a TCP link carrying CCSDS space packets as the stable external interface for later Yamcs (or other MCS) attachment. |
 | ADR-0006 | Java simulator scheduler is the simulation time master | Accepted | 2026-07-12 | The Java discrete-event scheduler owns simulation time; emulators (TSIM, TEMU, QEMU) and native OBSW processes are stepped slaves via `EmulatorControl` with grant/consumed semantics. See ADR-0006 for full analysis. |
+| ADR-0007 | Command Authorization Gate: per-CI Category B classification and containment | Proposed | 2026-07-25 | Agent stays Cat D (advisory, unverifiable); a small, dependency-free Command Authorization Gate (CAG) is engineered to the Cat B *technical* bar, carrying the command-chain consequence. Content-based authorization, fail-closed, in-gate confirmation. Independence recorded as a deviation (no compliance claim); containment limits stated verbatim. See ADR-0007 for full analysis. (SCR-010/M1h, SCR-011/M1i.) |
 
 ## Traceability
 
