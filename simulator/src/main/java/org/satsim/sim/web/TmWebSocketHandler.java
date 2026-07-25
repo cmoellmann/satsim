@@ -12,9 +12,9 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 /**
  * WebSocket TM/event distribution at {@code /api/tm} (ICD §8.2): every
- * emitted frame ({@code kind} tm/time/rejection) is broadcast as one JSON
+ * emitted frame ({@code kind} tm/time/rejection/tc) is broadcast as one JSON
  * text frame to all connected sessions [SIM-REQ-UI-002, SIM-REQ-UI-003,
- * SIM-REQ-UI-005, SIM-REQ-UI-007].
+ * SIM-REQ-UI-005, SIM-REQ-UI-007, SIM-REQ-UI-017].
  */
 @Component
 public class TmWebSocketHandler extends TextWebSocketHandler {

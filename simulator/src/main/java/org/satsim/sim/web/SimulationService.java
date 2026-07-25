@@ -24,9 +24,10 @@ import org.springframework.stereotype.Service;
  * (single-threaded, ADR-0006) {@link SimulationScheduler} onto one dedicated
  * simulation thread. TCs submitted via REST are encoded (structured compose)
  * or passed verbatim (raw hex, so negative vectors can be injected) and enter
- * the simulation at the current simulated time; TM, time and rejection frames
- * (ICD §8.2) are serialized to JSON and pushed to the WebSocket broadcaster
- * [SIM-REQ-UI-003, SIM-REQ-UI-005, SIM-REQ-UI-007].
+ * the simulation at the current simulated time; TM, time, rejection and tc
+ * frames (ICD §8.2) are serialized to JSON and pushed to the WebSocket
+ * broadcaster [SIM-REQ-UI-003, SIM-REQ-UI-005, SIM-REQ-UI-007,
+ * SIM-REQ-UI-017].
  *
  * <p>Time advances only via {@link #advanceBy(long)}, called by the pacing
  * policy; this class never reads the wall clock [SIM-REQ-TIME-001]. Time
@@ -61,6 +62,8 @@ public final class SimulationService {
   private int groundSequenceCount;
   /** Simulated time of the next due time frame; touched only on the sim thread. */
   private long nextTimeFrameNanos;
+  /** ICD §8.1 injection identifier, strictly increasing; sim thread only. */
+  private long nextInjectionId;
 
   public SimulationService(
       SimulationScheduler scheduler, PusSimulatedObsw obsw, TmWebSocketHandler tmBroadcaster) {
@@ -103,11 +106,14 @@ public final class SimulationService {
    * failed §6.3 check for undecodable raw injections) [SIM-REQ-UI-006]. Raw
    * hex is injected verbatim — deliberately without validation — so negative
    * vectors exercise the spacecraft-side rejection path.
+   *
+   * <p>The injection is additionally broadcast to all WebSocket sessions as
+   * an ICD §8.2 {@code tc} frame carrying the same fields, correlated by the
+   * {@code injectionId} assigned here [SIM-REQ-UI-017].
    */
   public TcSendResponse sendTc(TcSubmission submission) {
     return onSimThread(() -> {
       byte[] packet = toPacket(submission, true);
-      scheduler.injectTc(packet);
       Integer sequenceCount = null;
       TcSendResponse.Decoded decoded = null;
       String decodeError = null;
@@ -118,8 +124,18 @@ public final class SimulationService {
       } catch (PacketDecodeException e) {
         decodeError = e.reason().name();
       }
-      return TcSendResponse.of(
-          HEX.formatHex(packet), scheduler.clock().nanos(), sequenceCount, decoded, decodeError);
+      TcSendResponse response = TcSendResponse.of(
+          HEX.formatHex(packet),
+          scheduler.clock().nanos(),
+          sequenceCount,
+          decoded,
+          decodeError,
+          nextInjectionId++);
+      // Broadcast before injecting: ICD §8.2 requires the tc frame to precede
+      // every tm/rejection frame the injection causes [SIM-REQ-UI-017].
+      broadcast(TcFrame.of(response));
+      scheduler.injectTc(packet);
+      return response;
     });
   }
 

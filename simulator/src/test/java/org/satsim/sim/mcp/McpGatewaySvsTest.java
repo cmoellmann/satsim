@@ -3,6 +3,7 @@ package org.satsim.sim.mcp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,13 +14,21 @@ import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper;
 import io.modelcontextprotocol.spec.McpSchema;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.WebSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -29,12 +38,16 @@ import org.satsim.testsupport.Requirement;
 import org.satsim.testsupport.TestCase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 
 /**
- * SVS SIM-TC-041..045 (SCR-008, scope M1f): the MCP operator gateway per
+ * SVS SIM-TC-041..045 (SCR-008, scope M1f) and SIM-TC-046 (SCR-009, scope
+ * M1g — the gateway observes another operator's commanding): the MCP
+ * operator gateway per
  * ICD §8.4, driven end-to-end by a <em>scripted</em> MCP client — the
  * gateway runs as its own process and is spoken to over its real stdio
  * transport; no AI is involved. Pacing is disabled, simulated time advances
@@ -64,6 +77,10 @@ class McpGatewaySvsTest {
 
   @Autowired
   private SimulationService simulation;
+
+  /** ICD §8.1 injections of "another operator" — the gateway never submits them. */
+  @Autowired
+  private TestRestTemplate rest;
 
   @TempDir
   Path tempDir;
@@ -265,12 +282,146 @@ class McpGatewaySvsTest {
     assertEquals("CRC_ERROR", response.get("decodeError").asText());
 
     simulation.advanceBy(500_000_000L);
-    JsonNode log = pollLog(Map.of(), 1);
+    // Kind-filtered: from M1g the buffer also holds the tc record of this
+    // very injection (SCR-009), which SIM-TC-046 covers.
+    JsonNode log = pollLog(Map.of("kind", "rejection"), 1);
     assertEquals(1, log.get("records").size(), "exactly one rejection record expected");
     JsonNode rejection = log.get("records").get(0);
     assertEquals("rejection", rejection.get("kind").asText());
     assertEquals("NOT_A_PACKET", rejection.get("frame").get("reason").asText());
     assertEquals(V_NEG_01, rejection.get("frame").get("hex").asText());
+  }
+
+  /**
+   * SIM-TC-046 (SCR-009): every ICD §8.1 injection is broadcast as one
+   * {@code kind:"tc"} frame to <em>all</em> WebSocket sessions — here two
+   * pure observers that submit nothing — carrying the fields of the §8.1
+   * response and preceding the TM it causes; undecodable octets are
+   * broadcast just as well, with a higher injectionId; a preview broadcasts
+   * nothing. The gateway, attached as a third non-submitting observer,
+   * serves the same injections as {@code tc} records under filter kind tc,
+   * and under filter kind tm by none.
+   */
+  @Test
+  @TestCase("SIM-TC-046")
+  @Requirement({"SIM-REQ-UI-017", "SIM-REQ-MCP-003"})
+  void injectionsAreBroadcastAsTcFramesAndServedByPacketLog() throws Exception {
+    startGateway("3,17", 100);
+    TextCollector sessionA = new TextCollector();
+    TextCollector sessionB = new TextCollector();
+    WebSocket socketA = connect(sessionA);
+    WebSocket socketB = connect(sessionB);
+    try {
+      // V-TC-01 field values, submitted by neither observer nor gateway.
+      ResponseEntity<Map> ping = rest.postForEntity("/api/tc",
+          Map.of("service", 17, "subtype", 1, "ackFlags", 0, "appDataHex", ""), Map.class);
+      simulation.advanceBy(QUANTUM_NANOS);
+      // Per session: connect time frame, tc frame, TM(17,2), quantum time frame.
+      List<JsonNode> framesA = drainFrames(sessionA, 4);
+      List<JsonNode> framesB = drainFrames(sessionB, 4);
+
+      for (List<JsonNode> frames : List.of(framesA, framesB)) {
+        List<JsonNode> tcFrames = byKind(frames, "tc");
+        assertEquals(1, tcFrames.size(), "one tc frame per injection, on every session");
+        JsonNode tc = tcFrames.get(0);
+        Map<?, ?> body = ping.getBody();
+        // Field contents are those of the §8.1 response for this injection.
+        assertEquals(((Number) body.get("injectionId")).longValue(),
+            tc.get("injectionId").asLong());
+        assertEquals(V_TC_01, tc.get("hex").asText());
+        assertEquals(body.get("hex"), tc.get("hex").asText());
+        assertEquals(((Number) body.get("timeCoarse")).longValue(), tc.get("timeCoarse").asLong());
+        assertEquals(((Number) body.get("timeFine")).intValue(), tc.get("timeFine").asInt());
+        assertEquals(((Number) body.get("sequenceCount")).intValue(),
+            tc.get("sequenceCount").asInt());
+        Map<?, ?> decoded = (Map<?, ?>) body.get("decoded");
+        assertEquals(((Number) decoded.get("service")).intValue(),
+            tc.get("decoded").get("service").asInt());
+        assertEquals(((Number) decoded.get("subtype")).intValue(),
+            tc.get("decoded").get("subtype").asInt());
+        assertEquals(decoded.get("appDataHex"), tc.get("decoded").get("appDataHex").asText());
+        // Ordering: the tc frame precedes every frame the injection caused.
+        assertTrue(frames.indexOf(tc) < frames.indexOf(byKind(frames, "tm").get(0)),
+            "tc frame must precede the TM frames it causes");
+      }
+
+      ResponseEntity<Map> raw = rest.postForEntity("/api/tc", Map.of("hex", V_NEG_01), Map.class);
+      rest.postForEntity("/api/tc/preview",
+          Map.of("service", 17, "subtype", 1, "ackFlags", 0, "appDataHex", ""), Map.class);
+      simulation.advanceBy(QUANTUM_NANOS);
+      // tc frame, rejection frame, quantum time frame — and nothing from the preview.
+      List<JsonNode> rawTcFrames = byKind(drainFrames(sessionB, 3), "tc");
+      assertEquals(1, rawTcFrames.size(), "a preview must not broadcast a tc frame");
+      JsonNode rawTc = rawTcFrames.get(0);
+      assertEquals(V_NEG_01, rawTc.get("hex").asText());
+      assertEquals("CRC_ERROR", rawTc.get("decodeError").asText());
+      assertNull(rawTc.get("decoded"));
+      assertTrue(rawTc.get("injectionId").asLong()
+              > ((Number) ping.getBody().get("injectionId")).longValue(),
+          "injectionIds are strictly increasing");
+
+      // The gateway saw the same two injections without submitting any.
+      JsonNode log = pollLog(Map.of("kind", "tc"), 2);
+      assertEquals(2, log.get("records").size(), "one tc record per injection expected");
+      JsonNode firstFrame = log.get("records").get(0).get("frame");
+      JsonNode secondFrame = log.get("records").get(1).get("frame");
+      assertEquals(V_TC_01, firstFrame.get("hex").asText());
+      assertEquals(V_NEG_01, secondFrame.get("hex").asText());
+      assertEquals(((Number) ping.getBody().get("injectionId")).longValue(),
+          firstFrame.get("injectionId").asLong());
+      assertEquals(((Number) raw.getBody().get("injectionId")).longValue(),
+          secondFrame.get("injectionId").asLong());
+
+      JsonNode tmLog = pollLog(Map.of("kind", "tm"), 1);
+      for (JsonNode record : tmLog.get("records")) {
+        assertEquals("tm", record.get("kind").asText(), "kind filter tm must exclude tc records");
+      }
+    } finally {
+      socketA.abort();
+      socketB.abort();
+    }
+  }
+
+  /** Collects complete WebSocket text messages of one observing session. */
+  private static final class TextCollector implements WebSocket.Listener {
+    private final BlockingQueue<String> messages = new LinkedBlockingQueue<>();
+    private final StringBuilder partial = new StringBuilder();
+
+    @Override
+    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+      partial.append(data);
+      if (last) {
+        messages.add(partial.toString());
+        partial.setLength(0);
+      }
+      webSocket.request(1);
+      return null;
+    }
+  }
+
+  private WebSocket connect(TextCollector collector) throws Exception {
+    return HttpClient.newHttpClient().newWebSocketBuilder()
+        .buildAsync(URI.create("ws://localhost:" + port + "/api/tm"), collector)
+        .get(5, TimeUnit.SECONDS);
+  }
+
+  /** Reads at least {@code minimum} frames, then drains until 300 ms of quiet. */
+  private List<JsonNode> drainFrames(TextCollector collector, int minimum) throws Exception {
+    List<JsonNode> frames = new ArrayList<>();
+    for (int i = 0; i < minimum; i++) {
+      String frameJson = collector.messages.poll(5, TimeUnit.SECONDS);
+      assertNotNull(frameJson, "no frame received on /api/tm within 5 s");
+      frames.add(json.readTree(frameJson));
+    }
+    String extra;
+    while ((extra = collector.messages.poll(300, TimeUnit.MILLISECONDS)) != null) {
+      frames.add(json.readTree(extra));
+    }
+    return frames;
+  }
+
+  private static List<JsonNode> byKind(List<JsonNode> frames, String kind) {
+    return frames.stream().filter(f -> kind.equals(f.get("kind").asText())).toList();
   }
 
   /**

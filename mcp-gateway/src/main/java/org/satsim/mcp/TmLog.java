@@ -4,17 +4,24 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Ordered ring buffer of received ICD §8.2 {@code tm} and {@code rejection}
- * frames with monotonic cursors [SIM-REQ-MCP-003], plus the current OBT per
+ * Ordered ring buffer of received ICD §8.2 {@code tm}, {@code rejection} and
+ * {@code tc} frames with monotonic cursors [SIM-REQ-MCP-003] — the {@code tc}
+ * records (Issue 7, SCR-009) make other operators' commanding visible to the
+ * AI operator, including injections this gateway did not submit itself —
+ * plus the current OBT per
  * the latest {@code time} frame [SIM-REQ-MCP-004]. Blocking waits use
  * relative timeouts only — the gateway reads no wall clock (CLAUDE.md
  * rule 2 stays trivially satisfied on the ground side too).
  */
 final class TmLog {
+
+  /** ICD §8.2 frame kinds kept in the buffer; {@code time} is tracked separately. */
+  private static final Set<String> BUFFERED_KINDS = Set.of("tm", "rejection", "tc");
 
   /** One buffered frame; {@code cursor} is monotonic and never reused. */
   record Entry(long cursor, String kind, Map<String, Object> frame) {}
@@ -53,14 +60,14 @@ final class TmLog {
     this.capacity = capacity;
   }
 
-  /** Accepts any ICD §8.2 frame; buffers tm/rejection, tracks time frames. */
+  /** Accepts any ICD §8.2 frame; buffers tm/rejection/tc, tracks time frames. */
   void accept(Map<String, Object> frame) {
     Object kind = frame.get("kind");
     if ("time".equals(kind)) {
       lastTimeFrame = frame;
       return;
     }
-    if (!"tm".equals(kind) && !"rejection".equals(kind)) {
+    if (!BUFFERED_KINDS.contains(kind)) {
       return;
     }
     lock.lock();

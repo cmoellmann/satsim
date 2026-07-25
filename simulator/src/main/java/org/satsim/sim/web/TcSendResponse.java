@@ -11,7 +11,9 @@ import org.satsim.pus.time.CucTime;
  * injection OBT, the sequence count (ground counter for structured composes,
  * from the decoded packet for raw injections), and the decoded TC fields —
  * or {@code decodeError} naming the first failed ICD §6.3 check when a raw
- * injection is undecodable [SIM-REQ-UI-006].
+ * injection is undecodable [SIM-REQ-UI-006]. The {@code injectionId}
+ * (ICD Issue 7) identifies this injection on the §8.2 {@code tc} stream
+ * [SIM-REQ-UI-017].
  */
 @JsonInclude(Include.NON_NULL)
 public record TcSendResponse(
@@ -21,7 +23,8 @@ public record TcSendResponse(
     double timeSeconds,
     Integer sequenceCount,
     Decoded decoded,
-    String decodeError) {
+    String decodeError,
+    long injectionId) {
 
   /** Decoded TC fields per ICD §2/§3. */
   public record Decoded(
@@ -48,9 +51,14 @@ public record TcSendResponse(
     }
   }
 
-  /** Builds the response for an injection at simulated time {@code nanos}. */
+  /** Builds the response for injection {@code injectionId} at simulated time {@code nanos}. */
   public static TcSendResponse of(
-      String hex, long nanos, Integer sequenceCount, Decoded decoded, String decodeError) {
+      String hex,
+      long nanos,
+      Integer sequenceCount,
+      Decoded decoded,
+      String decodeError,
+      long injectionId) {
     CucTime time = CucTime.ofNanos(nanos);
     return new TcSendResponse(
         hex,
@@ -59,6 +67,7 @@ public record TcSendResponse(
         time.coarse() + time.fine() / 65536.0,
         sequenceCount,
         decoded,
-        decodeError);
+        decodeError,
+        injectionId);
   }
 }
