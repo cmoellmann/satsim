@@ -1,6 +1,8 @@
 # ADR-0007 — Command Authorization Gate: per-CI criticality classification and containment
 
-- Status: **Proposed** (awaiting project-lead disposition; see SCR-010)
+- Status: **Accepted** (project lead C. Möllmann, 2026-07-25, via review and
+  merge of PR #88; disposition recorded in PR #89. Immutable once baselined at
+  the M1h tag — changes thereafter require a superseding ADR, rule 4.)
 - Date: 2026-07-25
 - Deciders: Project lead (with AI-assisted trade-off analysis)
 - Configuration item: SATSIM-ADR-0007

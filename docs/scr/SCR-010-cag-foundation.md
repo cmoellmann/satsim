@@ -1,6 +1,8 @@
 # SCR-010 — Command Authorization Gate (Cat B CI): extract, content-based classification, in-gate confirmation (new increment M1h)
 
-- Status: Proposed (drafted 2026-07-25; awaiting project-lead disposition)
+- Status: Approved (proposal PR #88 merged 2026-07-25; disposition PR #89.
+  ICD/SRS/SVS + SDP classification spec updates and implementation follow in
+  later PRs per the SCR-008/009 pattern)
 - Date: 2026-07-25
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ADR (ADR-0007 +
@@ -102,7 +104,8 @@ direct-REST bypass test, and the AI-mediated independence experiment — all
 
 ## 4. Disposition
 
-- [ ] Approved — project lead (C. Möllmann), _pending_.
+- [x] Approved — project lead (C. Möllmann), 2026-07-25, via review and merge
+      of proposal PR #88; disposition recorded in PR #89.
 
 ## 5. Findings during implementation
 
