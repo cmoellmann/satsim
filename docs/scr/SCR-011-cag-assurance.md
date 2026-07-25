@@ -1,6 +1,8 @@
 # SCR-011 — Command Authorization Gate (Cat B CI): Category B verification, operator-eval harness, bypass demonstration (new increment M1i)
 
-- Status: Proposed (drafted 2026-07-25; awaiting project-lead disposition)
+- Status: Approved (proposal PR #91 merged 2026-07-25; disposition PR #92.
+  SDP/SRS/SVS + the new CAG safety-analysis doc and implementation follow in
+  later PRs per the SCR-008/009/010 pattern, and only after M1g and M1h)
 - Date: 2026-07-25
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-SRS, SATSIM-SVS,
@@ -129,7 +131,8 @@ the client-agnostic conformance requirement (deferred future extension, SCR-010
 
 ## 4. Disposition
 
-- [ ] Approved — project lead (C. Möllmann), _pending_.
+- [x] Approved — project lead (C. Möllmann), 2026-07-25, via review and merge
+      of proposal PR #91; disposition recorded in PR #92.
 
 ## 5. Findings during implementation
 
