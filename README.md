@@ -151,8 +151,13 @@ them down first.
 
 Currently: **135/135 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
-**Next: M2** — TCP length-framed space-packet link (ICD §8), the door for
-external clients and Yamcs.
+**Next (approved, not yet built):** `M1g` shared-traffic console
+([SCR-009](docs/scr/SCR-009-tc-broadcast.md)) — every telecommand broadcast to
+all observers; then the **Command Authorization Gate**, hardening the operator
+gateway to the ECSS Category B technical bar — `M1h` foundation
+([SCR-010](docs/scr/SCR-010-cag-foundation.md)) + `M1i` assurance
+([SCR-011](docs/scr/SCR-011-cag-assurance.md)). Then **M2** — TCP length-framed
+space-packet link (ICD §8), the door for external clients and Yamcs.
 
 ## Document set (ECSS compliant)
 
