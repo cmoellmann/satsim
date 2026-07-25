@@ -1,13 +1,14 @@
 # SatSim Space–Ground Interface Control Document (ICD)
 
-- Configuration item: SATSIM-ICD, Issue 6 (draft)
+- Configuration item: SATSIM-ICD, Issue 7 (draft)
 - Applicable: ECSS-E-ST-70-41C (PUS-C), CCSDS 133.0-B (Space Packet Protocol), CCSDS 301.0-B (Time Codes)
-- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset), SCR-003 (HMI/web API), SCR-008 (MCP operator gateway)
+- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset), SCR-003 (HMI/web API), SCR-008 (MCP operator gateway), SCR-009 (TC broadcast)
 - Issue 2 (draft) changes vs Issue 1: added §9 (ST[3] housekeeping subset), reference vectors §6.4/§6.5, OP-3; open points renumbered §9→§10. Per SCR-001.
 - Issue 3 (draft) changes vs Issue 2: added §10 (ST[1] request verification subset), reference vectors §6.6; V-NEG-02 clarified with explicit bytes (CRC recomputed — as previously worded the packet failed the CRC check before the version check); frontend default ack flags §3 updated; OP-1 closed, OP-3 re-targeted to M1b; open points renumbered §10→§11. Per SCR-002.
 - Issue 4 (draft) changes vs Issue 3: §8 web API restructured and extended — WebSocket frame-type discriminator `kind` (breaking change vs. the Issue 3 TM-only frame), time frames, rejection frames, extended `POST /api/tc` response. Space-link packet definitions (§2–§7) and all reference vectors unchanged. Per SCR-003.
 - Issue 5 (draft) changes vs Issue 4: OP-3 resolved (M1b, per SCR-001) — ST[3] semantic errors now yield TM(1,8) failed-completion reports: §9.1/§9.2/§9.3 error handling formalized, §10.2 completion rule updated, §10.4 failure codes 0x0004–0x0008 added, new reference vectors §6.7 (V-NEG-03, V-TM-09); OP-3 closed in §11. Existing vectors unchanged.
 - Issue 6 (draft) changes vs Issue 5: added §8.4 (MCP operator gateway tool contract, ground segment). Space-link packet definitions (§2–§7), web API (§8.1/§8.2) and all reference vectors unchanged. Configuration-item line corrected from the stale "Issue 4" to the current issue (editorial; the Issue 5 changes had been applied without bumping the line). Per SCR-008.
+- Issue 7 (draft) changes vs Issue 6: TC traffic made observable to all ground observers — §8.2 frame table gains the `tc` kind (one frame per §8.1 injection, broadcast to all sessions), §8.1 response gains the `injectionId` correlation handle carried by that frame, §8.4 `get_packet_log` filter enum gains `tc`. Additive: no existing field changes meaning, no frame kind is removed. **Space-link packet definitions (§2–§7) and all reference vectors unchanged.** Per SCR-009 (the `injectionId` field is the delta recorded in SCR-009 §5 against that SCR's impact analysis).
 
 > **RULE (binding, see CLAUDE.md):** The reference vectors in §6 are the authoritative
 > byte-level contract. Implementation and tests conform to this document; this
@@ -247,10 +248,12 @@ Response (HTTP 200), per SCR-003:
 | `timeCoarse`, `timeFine`, `timeSeconds` | injection OBT (CUC fields per §5; `timeSeconds` = coarse + fine/65536) |
 | `sequenceCount` | ground sequence count consumed by a structured compose; for raw injections taken from the decoded packet, absent if undecodable |
 | `decoded` | decoded TC fields per §2/§3 (`apid`, `sequenceCount`, `pusVersion`, `ackFlags`, `service`, `subtype`, `sourceId`, `appDataHex`), or `null` with `decodeError` naming the first failed check in §6.3 order |
+| `injectionId` | identifier of this injection (Issue 7), assigned by the simulator: a non-negative integer, strictly increasing over the simulator process lifetime, unique per injection. Not a packet field and not on the space link — it correlates this response with the §8.2 `tc` frame carrying the same injection |
 
 Invalid submissions (malformed hex, missing fields, out-of-range values) →
 HTTP 400 with `{"error"}`. `POST /api/tc/preview` (structured body only)
-returns `{"hex"}` without injecting and without consuming a sequence count.
+returns `{"hex"}` without injecting, without consuming a sequence count and
+without assigning an `injectionId`.
 
 ### 8.2 PoC web API — WebSocket TM/event stream
 
@@ -262,10 +265,18 @@ supersedes the Issue 3 TM-only frame format):
 | `tm` | `hex`, `decoded` (`apid`, `sequenceCount`, `service`, `subtype`, `messageTypeCounter`, `destinationId`, `timeCoarse`, `timeFine`, `timeSeconds`) | one frame per emitted TM space packet, broadcast to all sessions; `decoded` is `null` only for the defect case of an undecodable emitted TM |
 | `time` | `timeCoarse`, `timeFine`, `timeSeconds` | current OBT. Published on session connect and thereafter whenever simulated time has advanced at least the publication quantum — 100 ms *simulated* — since the last time frame (cadence defined in simulated time; no wall-clock involvement) |
 | `rejection` | `reason`, `hex`, `timeCoarse`, `timeFine`, `timeSeconds` | simulator **diagnostic channel** (not spacecraft telemetry) for spacecraft-side TC rejections. `reason` ∈ `NOT_A_PACKET` (failed a §6.3 structural/CRC check — silently discarded on the space link, no §10.4 code), `ILLEGAL_PUS_VERSION` (§10.4 code 0x0001), `ILLEGAL_SERVICE_OR_SUBTYPE` (§10.4 code 0x0002) |
+| `tc` | `injectionId`, `hex`, `timeCoarse`, `timeFine`, `timeSeconds`, `sequenceCount`, `decoded` or `decodeError` — field contents exactly as in the §8.1 response for the same injection | uplink **observation channel** (Issue 7): one frame per §8.1 injection — structured or raw, decodable or not — broadcast to all sessions, including the session that submitted it. Published before any frame caused by that injection (`tm`, `rejection`), so the causal order of the stream matches the order of events |
 
 The `tm` stream remains the byte-authoritative record: determinism
-comparisons (SIM-REQ-TIME-005) operate on TM packets only; `time` and
-`rejection` frames are web-API artifacts.
+comparisons (SIM-REQ-TIME-005) operate on TM packets only; `time`,
+`rejection` and `tc` frames are web-API artifacts.
+
+A client that both submits via §8.1 and observes this stream sees its own
+injection twice — once as the POST response, once as the broadcast `tc`
+frame. `injectionId` identifies the two as the same event: a client renders
+each injection once and recognizes injections it did not submit (other
+consoles, MCP operator gateways) by an `injectionId` it never received from
+a §8.1 response of its own.
 
 ### 8.3 External MCS/emulator link (from M2)
 
@@ -289,7 +300,7 @@ Tools:
 | `send_tc` | `service`, `subtype`, `ackFlags?`, `appDataHex?` | Structured compose and injection per §8.1 (omitted fields default per §8.1); result carries the full §8.1 response: `hex`, injection OBT, consumed sequence count, decoded fields. |
 | `preview_tc` | as `send_tc` | §8.1 preview: returns `hex` only; nothing injected, no sequence count consumed. |
 | `send_raw_tc` | `hex` | Raw injection per §8.1, deliberately without gateway-side validation of the octets (negative paths reachable). Result as `send_tc`. |
-| `get_packet_log` | `afterCursor?`, `filter?` (`kind` ∈ tm, rejection; `service?`, `subtype?`) | Ordered records of received §8.2 `tm` and `rejection` frames from the gateway ring buffer, each carrying a monotonic cursor; paged from `afterCursor` (default: buffer start). |
+| `get_packet_log` | `afterCursor?`, `filter?` (`kind` ∈ tm, rejection, tc; `service?`, `subtype?`) | Ordered records of received §8.2 `tm`, `rejection` and `tc` frames from the gateway ring buffer, each carrying a monotonic cursor; paged from `afterCursor` (default: buffer start). `tc` records (Issue 7) make other operators' commanding visible to the AI operator, including injections the gateway did not submit itself. |
 | `await_tm` | `filter` (as above, TM only), `timeoutMs`, `afterCursor?` | Blocks until the first TM record matching `filter` with cursor beyond `afterCursor` (default: call time) arrives and returns it, or returns a distinct timeout result after `timeoutMs`. |
 
 Resources:
