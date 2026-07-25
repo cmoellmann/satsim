@@ -64,7 +64,7 @@ expected traffic).
 | CI / area | Impact |
 |---|---|
 | SDP §4 | New milestone row **M1g** inserted between M1f and M2 (label scheme per SCR-001). M2…M5 unchanged, shifted one increment later. |
-| ICD | Issue 7: §8.2 frame table gains the `tc` kind with its field set; §8.4 `get_packet_log` filter enum gains `tc`. **No space-link change (§2–§7), no reference vectors touched.** |
+| ICD | Issue 7: §8.2 frame table gains the `tc` kind with its field set; §8.4 `get_packet_log` filter enum gains `tc`. **No space-link change (§2–§7), no reference vectors touched.** (Delta at spec time: §8.1 additionally gains the `injectionId` correlation field — see §5 D-1.) |
 | SRS | New SIM-REQ-UI-017 (T) / SIM-REQ-UI-018 (M), scope M1g; SIM-REQ-MCP-003 amended (kind set). |
 | SVS | New SIM-TC-046 (A) / SIM-TC-047 (M), scope M1g; SIM-TC-027..029 pass criteria amended where they enumerate expected WS frames. |
 | TraceabilityCheck | No tool change; CI pin stays M1f until the M1g gate. |
@@ -82,4 +82,20 @@ expected traffic).
 
 ## 5. Findings during implementation
 
-*(to be completed)*
+- **D-1 (spec PR, 2026-07-25): `injectionId` added to ICD §8.1 as well as
+  §8.2.** §3 of this SCR foresaw an ICD change confined to the §8.2 frame
+  table. Writing the specification showed that requirement 2 of §1 ("the
+  session's own TCs appear exactly once", no duplication between the §8.1
+  response path and the broadcast) is not verifiable without a correlation
+  handle: a console that renders every `tc` frame cannot otherwise tell its
+  own injection from another operator's. Both candidate solutions were put
+  to the project lead — a server-assigned identifier in §8.1 and §8.2, or a
+  client-side match on (hex, OBT) with no §8.1 change. The identifier was
+  chosen on 2026-07-25: the (hex, OBT) match is ambiguous when two clients
+  inject byte-identical octets at the same simulated instant, which would
+  leave SIM-REQ-UI-018 verifiable only heuristically.
+  Delta vs §3: ICD §8.1 response gains the `injectionId` field (additive, no
+  existing field changes meaning; `POST /api/tc/preview` unaffected).
+  Assignment and broadcast are specified together in SIM-REQ-UI-017 and
+  verified by SIM-TC-046; SIM-TC-028 records the field's appearance in the
+  §8.1 response.
