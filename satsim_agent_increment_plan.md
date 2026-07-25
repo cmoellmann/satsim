@@ -1,9 +1,27 @@
 # SatSim Increment Plan — Hardening the MCP Operator Gateway to a Category B Command Authorization Gate
 
-*Handover for the Claude Code session. **Revision 3** — assumptions re-verified against the
-repo at M1f, milestone numbering corrected, scope split into two increments.*
+*Handover for the Claude Code session. **Revision 4** — the delta review folded in
+(agent-classification correction + deferred reference client); milestone numbering and
+two-increment split from Rev 3 unchanged.*
 
 ---
+
+## 0-bis) Delta folded in Rev 4 (read this too)
+
+The delta (`satsim_agent_increment_plan_DELTA.md`) has been incorporated. Two changes to the
+wording below — the substance and build order are otherwise unchanged:
+
+- **D-1 (correction):** "the agent is Category D" throughout this document is **wrong** and is
+  superseded. The agent loop is **third-party MCP client software** (Claude Code / any conforming
+  client); the repository has **no model call**. It is not a CI of this project — it is untrusted
+  third-party software recorded in the **SRF §1a**, with **no criticality claim**. Applied as
+  **ADR-0007 Erratum E1** (in-place, pre-M1h-baseline) + SRF §1a + SCR-010 §5 finding F-1. Read
+  every "Agent (Cat D)" below as "agent = untrusted third-party (SRF)". This *strengthens* the
+  containment claim.
+- **D-2 (deferred):** a project-owned **reference operator client** (a classifiable Cat D CI that
+  would make client-agnostic CAG enforcement verifiable — the operator-side twin of
+  `SIM-REQ-LINK-003`, **speaking MCP**) is **deferred as a named future extension** (README
+  roadmap; own SCR later). It is **not** in M1h/M1i scope.
 
 ## 0) What changed in Rev 3 (read this first)
 

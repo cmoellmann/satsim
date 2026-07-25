@@ -39,6 +39,28 @@ Default Maven core plugins (compiler, resources, jar, install, deploy) are
 Apache-2.0 and covered by the Apache Maven entry; versions are inherited from
 the Maven distribution unless pinned in `pom.xml`.
 
+## 1a. External operator-side software (untrusted; not part of any artifact)
+
+Software that operates SatSim from the outside but is **not** reused code linked
+into any SatSim build/test/runtime artifact. Recorded here for completeness and
+for the criticality-containment argument (ADR-0007), not as a linked dependency.
+
+| Component | Version | Scope | License / terms | Distribution impact | Recorded |
+|---|---|---|---|---|---|
+| MCP operator client — Claude Code today, **any conforming MCP client** in principle | operator-selected (not pinned) | operator tool (external); runs on the operator's machine; reaches SatSim only through the `mcp-gateway` MCP surface (stdio) | per the client's own terms (Claude Code: Anthropic's commercial terms) — **not distributed with SatSim** | None — external tool, never bundled or redistributed by this project | 2026-07-25, C. Möllmann (ADR-0007 Erratum E1) |
+
+**Classification note (ADR-0007 Erratum E1).** The MCP client — and specifically
+the AI agent loop inside it — is **third-party software this project did not write
+and cannot inspect**; the repository contains **no model call anywhere**. It is
+therefore **untrusted by construction**, **not verified** by this project, and
+carries **no criticality claim**. This is the honest basis of the containment
+argument: the deterministic Command Authorization Gate (engineered to the Category
+B technical bar) bounds an untrusted, non-inspectable black box. A *project-owned*
+reference operator client — which could be a classifiable Category D CI and would
+make client-agnostic CAG enforcement verifiable (the operator-side twin of
+SIM-REQ-LINK-003) — is a **deferred future extension** (README roadmap; would
+enter via its own SCR) and would speak MCP.
+
 ## 2. Planned dependencies (approval pending — do not add before approval)
 
 | Component | Anticipated scope | License (SPDX) | Notes | Milestone |
@@ -63,3 +85,4 @@ the Maven distribution unless pinned in `pom.xml`.
 | 1 (draft) | 2026-07-19 | SRF-OPEN-1 closed: outbound license Apache-2.0 chosen, `LICENSE` added at repo root (verbatim apache.org text), README updated. Precedes making the repository public. |
 | 1 (draft) | 2026-07-19 | Demo deployment reworked to prebuilt-image route: CI builds/pushes the image to GHCR (GitHub service, like Actions — not registered) using the runner's preinstalled Docker CLI (CI toolchain, covered like the Temurin runner JDK); no new third-party actions or components introduced. |
 | 1 (draft) | 2026-07-20 | MCP Java SDK 2.0.0 (mcp-core + mcp-json-jackson2, MIT) added for the `mcp-gateway` module per SCR-008. Jackson 2 binding chosen deliberately: keeps the repository on a single JSON stack (Jackson 3 / `tools.jackson` was evaluated and dropped — its jackson-annotations ≥ 2.20 requirement clashes with the Spring-Boot-managed version on the SVS test classpath). |
+| 1 (draft) | 2026-07-25 | New §1a: the external MCP operator client (Claude Code / any conforming client) recorded as untrusted third-party software — not a linked dependency, not distributed, no criticality claim. Corrects the ADR-0007 classification error (Erratum E1, finding in SCR-010 §5): the AI agent is not a CI of this project. |
