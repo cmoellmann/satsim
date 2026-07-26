@@ -110,7 +110,8 @@ The load-bearing ideas, each fixed by an ADR:
 | `pus-core` | CCSDS/PUS-C packet value types + codecs (§3.1) | JDK only | Framework-free forever (CLAUDE.md rule 5); indicative 80% coverage target |
 | `simulator` | Simulation core, OBSW targets, web API, pacing, Spring wiring (§3.2) | `pus-core`, Spring Boot | Only module allowed to contain Spring types |
 | `sim-test-support` | `@Requirement`/`@TestCase` annotations + `TraceabilityCheck` CI tool (§3.3) | JDK only | Test/process scope only, never on a production classpath |
-| `mcp-gateway` | MCP operator gateway (§3.5): TM/TC as MCP tools over stdio for AI operator clients (ICD §8.4, SCR-008) | `pus-core`, MCP Java SDK, Jackson 2 | Spring-free ground-segment client of the web API only — no simulator internals [SIM-REQ-MCP-002] |
+| `ops-cag` | Command Authorization Gate (§3.6): decode → classify → decide → report on every telecommand (ADR-0007, SCR-008/010) | `pus-core` only | The **Category B** configuration item (SDP §1.1). JDK-only, Spring-free, MCP-free, no network, no threads, no dynamic policy [SIM-REQ-CAG-001] |
+| `mcp-gateway` | MCP operator gateway (§3.5): TM/TC as MCP tools over stdio for AI operator clients (ICD §8.4, SCR-008) | `pus-core`, `ops-cag`, MCP Java SDK, Jackson 2 | Spring-free ground-segment client of the web API only — no simulator internals [SIM-REQ-MCP-002]; holds no authorization logic of its own [SIM-REQ-MCP-005] |
 
 The frontend (`simulator/src/main/resources/static/`: `index.html`,
 `app.js`, `style.css`) is plain HTML/JS/CSS served by Spring Boot as static
@@ -487,15 +488,149 @@ gateway knows about the spacecraft.
 | `WebApiLink` | The link-adapter seam: structured/raw/preview submission, §8.2 frame stream [SIM-REQ-MCP-002] |
 | `RestWsLink` | The §8.1/§8.2 adapter on JDK `java.net.http` (HTTP + WebSocket), JSON via Jackson 2 |
 | `TmLog` | Ring buffer of `tm`/`rejection`/`tc` frames with monotonic cursors (the `tc` records, M1g, make other operators' commanding visible to the AI operator); blocking `await` (relative timeouts only — no wall-clock read); OBT per latest `time` frame [SIM-REQ-MCP-003/-004] |
-| `Authority` | Allowlist on decoded injection content (undecodable raw permitted) + session TC budget [SIM-REQ-MCP-005] |
-| `OpsLog` | JSONL record per tool invocation incl. denied ones: tool, params, outcome, OBT [SIM-REQ-MCP-006] |
-| `Gateway` | Assembles the five ICD §8.4 tools and three resources into the MCP server (MCP Java SDK, sync API) [SIM-REQ-MCP-001] |
+| `Authority` | Session TC budget only, decremented per **forwarded** injection. From M1h it holds no allowlist and no content rule — those moved into `ops-cag` (§3.6) [SIM-REQ-MCP-005] |
+| `OpsLog` | JSONL record per tool invocation incl. rejected and held ones: tool, params, outcome, OBT, and for every injection the gate decision, reason, tier and confirmation token [SIM-REQ-MCP-006, SIM-REQ-CAG-006] |
+| `Gateway` | Assembles the five ICD §8.4 tools and three resources into the MCP server (MCP Java SDK, sync API) [SIM-REQ-MCP-001]. Both send tools funnel through one private `authorize` method, so no route to the simulator skips the gate |
 
-Validation (SIM-TC-041..046) lives in the `simulator` module's test tree
+**Authorization flow (M1h).** `Gateway.authorize` is the single choke point:
+gate first, budget second, inject only on a forward verdict.
+
+For a structured `send_tc` the octets must exist before they can be judged, so
+the gateway calls the §8.1 *preview* (which consumes no sequence count) and
+hands those octets to the gate. The classification therefore rests on what the
+compose actually produces, not on the `service`/`subtype` arguments the client
+supplied — which is the point: an AI client controls its arguments and so they
+cannot be an authorization input [SIM-REQ-CAG-002].
+
+A held injection returns a normal structured result, not a tool error: nothing
+went wrong, the command is waiting for a human. The result carries the token and
+the decoded command but deliberately **not** the command line that would record
+the confirmation; that is printed on the gateway's own stderr, where the human
+is. Putting it in a tool result would hand the one party that must not confirm a
+ready-made recipe.
+
+Validation (SIM-TC-041..046, SIM-TC-048..052) lives in the `simulator` module's test tree
 (`org.satsim.sim.mcp.McpGatewaySvsTest`): the Spring test context provides
 the deterministically driven simulator, and the gateway under test runs as
 a real child process driven by a scripted `McpSyncClient` over its
 production stdio transport.
+
+### 3.6 `ops-cag` — Command Authorization Gate (M1h, SCR-010, ADR-0007)
+
+Package `org.satsim.cag`. The one component that decides which telecommands
+reach the spacecraft, and the only one classified to the **Category B technical
+bar** (SDP §1.1) inside the otherwise Category D product. It exists because an
+untrusted operator client — third-party MCP software, no criticality claim —
+now sits on the command chain, and the answer to an unverifiable component is
+not to verify it but to bound it with one you can.
+
+Everything about the module serves being small enough to verify: `pus-core` and
+the JDK, no framework, no MCP types, no network, no threads of its own, no
+dynamic policy, no formatting, no retries [SIM-REQ-CAG-001].
+
+```mermaid
+classDiagram
+  direction LR
+  class CommandAuthorizationGate {
+    decide(octets) GateDecision
+    pendingHolds() List
+  }
+  class ClassificationTable {
+    tierOf(service, subtype)$ Optional~AuthorityTier~
+    entries()$ List
+  }
+  class AuthorityTier {
+    <<enum>>
+    OBSERVATION
+    BENIGN_WRITE
+    STATE_CHANGING_WRITE
+  }
+  class GateDecision {
+    <<record>>
+    outcome, reason, tier
+    token, command
+    ignoredConfirmations
+  }
+  class CommandSummary {
+    <<record>>
+    service, subtype, ackFlags, appDataHex
+    identity()
+  }
+  class ConfirmationChannel {
+    <<interface>>
+    recorded() Set
+    discard(token)
+    clear()
+  }
+  class FileConfirmationChannel {
+    one file per confirmation
+  }
+  class CagConfirm {
+    main(args)$ operator CLI
+  }
+  CommandAuthorizationGate --> ClassificationTable
+  CommandAuthorizationGate --> ConfirmationChannel
+  CommandAuthorizationGate --> GateDecision
+  GateDecision --> AuthorityTier
+  GateDecision --> CommandSummary
+  FileConfirmationChannel ..|> ConfirmationChannel
+  CagConfirm ..> FileConfirmationChannel : writes tokens into
+```
+
+| Class | Responsibility |
+|---|---|
+| `CommandAuthorizationGate` | `decide(octets)`: decode via `pus-core`, classify, apply the session allowlist, then forward / reject / hold. Owns the pending holds. `synchronized` — the gateway serves MCP calls from several threads |
+| `ClassificationTable` | Static (service, subtype) → tier map. No default tier, no dynamic loading: adding a telecommand to the ICD subset requires a reviewed change here |
+| `AuthorityTier` | The three tiers of ADR-0007 C4. `OBSERVATION` has no member in today's tailored ICD subset and is defined anyway — the model is the authorization scheme, not a list of current telecommands |
+| `GateDecision` | The verdict plus the evidence the ops log needs: outcome, reason, tier, token, decoded command, discarded confirmations. Constructor invariants make an unreleasable hold or a tokenless held command unrepresentable |
+| `CommandSummary` | What a held command *does*, in the terms a human confirms |
+| `ConfirmationChannel` / `FileConfirmationChannel` | The out-of-band channel: one file per recorded confirmation, polled on demand. No watcher, no thread, no wall-clock read |
+| `CagConfirm` | The operator CLI (`<confirm-dir> <token>`) that records one confirmation |
+
+**Fail-closed (`SIM-REQ-CAG-003`).** Undecodable octets, a table gap, and a
+pair outside the allowlist are all rejections. The table gap matters most:
+defaulting an unknown telecommand to *forward* would make the gate's silence an
+authorization. Note the boundary — the gate rejects on **undecodability**, not
+on spacecraft-level validity, so V-NEG-02 (unsupported PUS version) decodes,
+classifies as the ping it is, forwards, and is refused by the spacecraft under
+ICD §10.2 as before. Since M1h the previously permitted case of undecodable raw
+octets through `send_raw_tc` is refused (ICD Issue 8; SCR-010 §5 F-3).
+
+**Hold and confirmation (`SIM-REQ-CAG-005`).** A state-changing write is held
+under a token unique to the session and bound to the command's identity, so a
+confirmation cannot be transplanted onto a different command. Tokens are
+sequential rather than random: the gate stays deterministic, which its
+verification bar asks of it, and secrecy would buy nothing because no MCP tool
+can record a confirmation whatever the token is.
+
+The confirmation is bound to the command's **identity** — service, subtype, ack
+flags, application data — and deliberately not to the exact octets. The CCSDS
+sequence count differs between the octets previewed at classification and the
+octets finally injected, and changes whenever another operator commands in
+between; binding to it would expire confirmations for reasons unrelated to what
+was confirmed. What a human confirms is "disable housekeeping structure 1", not
+one counter value (SCR-010 §5 F-6).
+
+Both the hold and its confirmation are consumed on release, so one confirmation
+authorizes exactly one injection and the next identical command is held afresh.
+A recorded token matching no pending hold is discarded unhonoured and reported
+so the gateway logs it — the gate honours only tokens it issued and still holds.
+The channel is cleared as the gate is constructed: nothing recorded before this
+session may release anything, which is how "confirmations do not survive a
+restart" is realized given that holds live in memory but files do not.
+
+**Limits (binding, ADR-0007 C8).** The gate bounds *one* failure mode: an
+operator proposing a command type it has no authority for. It does not bound a
+valid command at the wrong moment, a harmful sequence of individually authorized
+commands, a correct command derived from misread telemetry, an omission, or a
+confirmation obtained on false pretenses — nor, on the same machine, an operator
+host with arbitrary shell execution, which can run `CagConfirm` as easily as a
+human can. Containment holds for the **tool path**. That is the claim, and the
+design makes no larger one.
+
+The Category B verification bar itself — hazard analysis, software FMEA over the
+command path, 100 % statement and decision coverage, the robustness suite — is
+**M1i** (SCR-011), not M1h.
 
 ## 4. Runtime view — threads and state ownership
 
@@ -665,6 +800,7 @@ operator can distinguish "no such TM yet" from "tool failed".
 | `web` package + frontend | SIM-REQ-UI-001..013 |
 | `sim-test-support` | SIM-REQ-QA-001..003 |
 | `mcp-gateway` | SIM-REQ-MCP-001..006 |
+| `ops-cag` | SIM-REQ-CAG-001..006 |
 
 (Authoritative per-test tracing lives in the generated traceability matrix,
 `docs/test-reports/`; this table is the coarse orientation map.)

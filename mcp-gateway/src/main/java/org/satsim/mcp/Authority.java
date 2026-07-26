@@ -3,9 +3,16 @@ package org.satsim.mcp;
 import java.util.Optional;
 
 /**
- * Authority bounds per ICD §8.4 [SIM-REQ-MCP-005]: (service, subtype)
- * allowlist on the decoded content of every injection and a session TC
- * budget on all injections. Enforced before anything reaches the web API.
+ * The session TC budget per ICD §8.4 [SIM-REQ-MCP-005]: a coarse ceiling on
+ * how many telecommands one gateway session may forward, decremented by every
+ * forwarded injection ({@code preview_tc} exempt; rejected and held calls
+ * consume nothing).
+ *
+ * <p>Content-based authorization is deliberately <em>not</em> here. From M1h it
+ * belongs to the Command Authorization Gate (ADR-0007 C1, SCR-010): the gate is
+ * the Category B configuration item and the gateway keeps transport concerns,
+ * so the budget — a session control that needs no knowledge of what a
+ * telecommand does — stays on this side of the seam and the gate stays small.
  */
 final class Authority {
 
@@ -18,18 +25,11 @@ final class Authority {
   }
 
   /**
-   * Vets one injection and, if permitted, consumes one budget unit.
-   * {@code service}/{@code subtype} are {@code null} for undecodable raw
-   * octets, which the allowlist deliberately permits (ICD §8.4 — they
-   * exercise the §6.3 rejection path).
+   * Consumes one budget unit for an injection the gate has authorized.
    *
-   * @return empty if permitted, otherwise the denial reason
+   * @return empty if consumed, otherwise the exhaustion reason
    */
-  synchronized Optional<String> vetInjection(Integer service, Integer subtype) {
-    if (service != null && subtype != null && !config.allows(service, subtype)) {
-      return Optional.of("ALLOWLIST_DENIED: TC(" + service + "," + subtype
-          + ") is not in the configured allowlist " + config.allowlist());
-    }
+  synchronized Optional<String> consumeBudget() {
     if (remaining <= 0) {
       return Optional.of("BUDGET_EXHAUSTED: the session TC budget of "
           + config.budget() + " injections is used up");
