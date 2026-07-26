@@ -7,15 +7,16 @@ import java.util.Set;
 
 /**
  * Gateway configuration per ICD §8.4: simulator web-API base URL, TC
- * allowlist, session TC budget, ops-log and ICD file locations. Parsed from
- * command-line arguments by {@link GatewayMain}.
+ * allowlist, session TC budget, ops-log, ICD and confirmation-directory
+ * locations. Parsed from command-line arguments by {@link GatewayMain}.
  *
  * <p>Allowlist entries are either a bare service type ({@code "3"} = all
  * subtypes of ST[3]) or {@code service/subtype} ({@code "17/1"}). The
  * default is the tailored TC set of the ICD (ST[3], ST[17]).
  */
 record GatewayConfig(
-    URI baseUrl, Set<String> allowlist, int budget, Path opsLogPath, Path icdPath) {
+    URI baseUrl, Set<String> allowlist, int budget, Path opsLogPath, Path icdPath,
+    Path confirmDirPath) {
 
   static final String DEFAULT_ALLOWLIST = "3,17";
   static final int DEFAULT_BUDGET = 100;
@@ -26,6 +27,7 @@ record GatewayConfig(
     int budget = DEFAULT_BUDGET;
     Path opsLog = Path.of("ops-log.jsonl");
     Path icd = Path.of("docs", "icd.md");
+    Path confirmDir = Path.of("cag-confirmations");
     for (int i = 0; i + 1 < args.length; i += 2) {
       switch (args[i]) {
         case "--url" -> url = URI.create(args[i + 1]);
@@ -33,13 +35,15 @@ record GatewayConfig(
         case "--budget" -> budget = Integer.parseInt(args[i + 1]);
         case "--ops-log" -> opsLog = Path.of(args[i + 1]);
         case "--icd" -> icd = Path.of(args[i + 1]);
+        case "--confirm-dir" -> confirmDir = Path.of(args[i + 1]);
         default -> throw new IllegalArgumentException("unknown option: " + args[i]);
       }
     }
     if (url == null) {
       throw new IllegalArgumentException(
           "usage: --url http://host:port [--allow 3,17] [--budget 100]"
-              + " [--ops-log ops-log.jsonl] [--icd docs/icd.md]");
+              + " [--ops-log ops-log.jsonl] [--icd docs/icd.md]"
+              + " [--confirm-dir cag-confirmations]");
     }
     Set<String> entries = new LinkedHashSet<>();
     for (String entry : allow.split(",")) {
@@ -47,7 +51,7 @@ record GatewayConfig(
         entries.add(entry.trim());
       }
     }
-    return new GatewayConfig(url, Set.copyOf(entries), budget, opsLog, icd);
+    return new GatewayConfig(url, Set.copyOf(entries), budget, opsLog, icd, confirmDir);
   }
 
   /** Allowlist check on a decoded (service, subtype) pair. */

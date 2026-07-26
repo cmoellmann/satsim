@@ -2,13 +2,32 @@
 <!--
   SpotBugs exclude filter for SatSim.
 
-  Intentionally empty: no findings are excluded by default. Every future
-  exclusion added here must, at minimum, name the bug pattern, the class
-  (or method) it applies to, and a written justification for why the
-  finding is a false positive or an accepted risk - and must be added via
-  a reviewed PR, not ad hoc.
+  No findings are excluded by default. Every exclusion added here must, at
+  minimum, name the bug pattern, the class (or method) it applies to, and a
+  written justification for why the finding is a false positive or an accepted
+  risk - and must be added via a reviewed PR, not ad hoc.
 -->
 <FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                  xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/master/spotbugs/etc/findbugsfilter.xsd">
+
+  <!--
+    EI_EXPOSE_REP2 on CommandAuthorizationGate's confirmation channel (M1h,
+    SCR-010). False positive: the detector assumes a stored mutable object is
+    data the class should have copied defensively. ConfirmationChannel is not
+    data - it is an injected collaborator, and its mutation is its purpose
+    (the gate discards a confirmation as it honours it, so a confirmation
+    releases exactly one telecommand). Copying it would break that contract.
+
+    Injection rather than construction inside the gate is deliberate and is
+    part of SIM-REQ-CAG-001: the Category B component stays free of direct
+    filesystem access, which lives in FileConfirmationChannel, and the gate
+    stays testable against an in-memory channel. Scoped to the one field so
+    the pattern remains active everywhere else.
+  -->
+  <Match>
+    <Class name="org.satsim.cag.CommandAuthorizationGate"/>
+    <Field name="channel"/>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+  </Match>
 </FindBugsFilter>

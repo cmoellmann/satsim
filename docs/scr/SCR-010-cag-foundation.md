@@ -201,3 +201,46 @@ direct-REST bypass test, and the AI-mediated independence experiment — all
   status column named ICD Issue 1, ADR-0001…0006 and SCR-001…005 (corrected to
   Issue 8, ADR-0001…0007 and SCR-001…011). Editorial only — no disposition is
   changed.
+
+- **F-6 (implementation PR, 2026-07-26) — a confirmation is bound to the
+  command's identity, not to its exact octets.** `SIM-REQ-CAG-005` requires that
+  a recorded confirmation release the telecommand it was issued for and no
+  other, which needs a definition of "the same command". Binding to the literal
+  octets was tried first and does not work: the CCSDS packet sequence count
+  differs between the octets the gateway previews when the gate classifies them
+  and the octets finally injected, and it moves again whenever another operator
+  commands in between — so a confirmation would expire for reasons unrelated to
+  what was confirmed. The gate therefore binds to the decoded **identity** —
+  service, subtype, acknowledgement flags, application data (`CommandSummary`) —
+  and deliberately excludes the sequence count, which is transport bookkeeping.
+  This matches what a human actually confirms ("disable housekeeping structure
+  1", not one counter value) and keeps `SIM-TC-051`'s "identical command"
+  well-defined. The narrowing that matters is preserved: a confirmation for
+  TC(3,7) cannot release TC(3,5), which `CommandAuthorizationGateTest`
+  asserts directly.
+
+- **F-7 (implementation PR, 2026-07-26) — first entry in the SpotBugs exclude
+  filter.** `config/spotbugs/exclude.xml` had been deliberately empty since M0
+  ("no findings are excluded by default"). The gate's injected
+  `ConfirmationChannel` raises `EI_EXPOSE_REP2`, whose premise — a stored
+  mutable object is data the class should have copied — does not hold here: the
+  channel is a collaborator and its mutation *is* its contract (the gate
+  discards a confirmation as it honours it, so one confirmation releases one
+  telecommand). Copying it would break that. Injecting rather than constructing
+  the channel inside the gate is required by `SIM-REQ-CAG-001` — direct
+  filesystem access stays in `FileConfirmationChannel` and the gate remains
+  testable against an in-memory channel. The alternative, `@SuppressFBWarnings`,
+  would add a third-party annotation dependency and needs rule-8 approval for a
+  static-analysis nicety. Exclusion scoped to the single class and field, with
+  the justification in the file, so the pattern stays active everywhere else.
+  Flagged explicitly for review as a change to a shared quality gate.
+
+- **F-8 (implementation PR, 2026-07-26) — `SIM-TC-045`'s implementation had to
+  change, its specification did not.** The M1f test consumed the session TC
+  budget by injecting undecodable octets three times, which the allowlist then
+  exempted. The gate now rejects those, and rejected calls consume no budget, so
+  the budget half is exercised with the forwarding telecommand the case already
+  describes. The two halves also need two gateway configurations, since one
+  allowlist cannot both exclude and permit ST[17] — previously masked by the
+  allowlist-exempt path. The SVS text of `SIM-TC-045` is unchanged and was
+  re-reviewed against the new behaviour; only test code moved.

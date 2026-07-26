@@ -33,6 +33,14 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <!-- The Command Authorization Gate (ADR-0007, SDP §1.1): the gateway
+           submits every injection to it and holds no authorization logic
+           of its own [SIM-REQ-MCP-005]. -->
+      <groupId>org.satsim</groupId>
+      <artifactId>ops-cag</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>io.modelcontextprotocol.sdk</groupId>
       <artifactId>mcp-core</artifactId>
     </dependency>

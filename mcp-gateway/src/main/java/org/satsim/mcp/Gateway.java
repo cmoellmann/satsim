@@ -11,10 +11,12 @@ import io.modelcontextprotocol.spec.McpSchema.TextResourceContents;
 import io.modelcontextprotocol.spec.McpServerTransportProvider;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.satsim.pus.PacketDecodeException;
-import org.satsim.pus.tc.TcPacket;
+import org.satsim.cag.ClassificationTable;
+import org.satsim.cag.CommandAuthorizationGate;
+import org.satsim.cag.GateDecision;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.UncheckedIOException;
@@ -24,6 +26,13 @@ import java.io.UncheckedIOException;
  * tools and three resources on top of a {@link WebApiLink}, with authority
  * bounds and an ops log. Pure ground segment — everything it knows about
  * the spacecraft passed through the link [SIM-REQ-MCP-002].
+ *
+ * <p>Authorization is not decided here. Every injection goes to the
+ * {@link CommandAuthorizationGate} first [SIM-REQ-MCP-005], and this class
+ * holds no rule about what may be commanded — it composes octets, relays the
+ * gate's verdict, and logs it (ADR-0007 C1). The gateway also offers no tool
+ * by which a confirmation could be recorded, which is what keeps a held
+ * telecommand held whatever the attached MCP client does.
  */
 public final class Gateway {
 
@@ -34,17 +43,19 @@ public final class Gateway {
   private final WebApiLink link;
   private final TmLog tmLog;
   private final Authority authority;
+  private final CommandAuthorizationGate gate;
   private final OpsLog opsLog;
   private final GatewayConfig config;
   private final String icdText;
   private final ObjectMapper json;
 
   public Gateway(GatewayConfig config, WebApiLink link, TmLog tmLog, Authority authority,
-      OpsLog opsLog, String icdText, ObjectMapper json) {
+      CommandAuthorizationGate gate, OpsLog opsLog, String icdText, ObjectMapper json) {
     this.config = config;
     this.link = link;
     this.tmLog = tmLog;
     this.authority = authority;
+    this.gate = gate;
     this.opsLog = opsLog;
     this.icdText = icdText;
     this.json = json.copy();
@@ -82,18 +93,23 @@ public final class Gateway {
 
   private SyncToolSpecification sendTc() {
     return tool("send_tc",
-        "Compose and inject a PUS TC per ICD §8.1 structured compose. Subject to "
-            + "the allowlist and TC budget. Returns the full §8.1 response.",
+        "Compose and inject a PUS TC per ICD §8.1 structured compose. Every injection "
+            + "is authorized by the Command Authorization Gate on its decoded content: "
+            + "state-changing telecommands are held until a human records a confirmation "
+            + "out of band, which no tool of this interface can do. Returns the full "
+            + "§8.1 response when forwarded.",
         COMPOSE_SCHEMA,
         args -> {
           int service = requiredInt(args, "service");
           int subtype = requiredInt(args, "subtype");
-          String denial = authority.vetInjection(service, subtype).orElse(null);
-          if (denial != null) {
-            return error(denial);
-          }
-          return ok(link.submitStructured(service, subtype,
-              optionalInt(args, "ackFlags"), (String) args.get("appDataHex")));
+          Integer ackFlags = optionalInt(args, "ackFlags");
+          String appDataHex = (String) args.get("appDataHex");
+          // The gate decides on octets, not on these arguments: the same
+          // compose the simulator would inject is previewed first (no sequence
+          // count consumed, ICD §8.1) and those octets are what it classifies.
+          String hex = (String) link.preview(service, subtype, ackFlags, appDataHex).get("hex");
+          return authorize(hex,
+              () -> link.submitStructured(service, subtype, ackFlags, appDataHex));
         });
   }
 
@@ -102,15 +118,18 @@ public final class Gateway {
         "Preview the encoded octets of a structured compose per ICD §8.1 without "
             + "injecting and without consuming a sequence count or budget.",
         COMPOSE_SCHEMA,
-        args -> ok(link.preview(requiredInt(args, "service"), requiredInt(args, "subtype"),
-            optionalInt(args, "ackFlags"), (String) args.get("appDataHex"))));
+        args -> plain(ok(link.preview(requiredInt(args, "service"),
+            requiredInt(args, "subtype"), optionalInt(args, "ackFlags"),
+            (String) args.get("appDataHex")))));
   }
 
   private SyncToolSpecification sendRawTc() {
     return tool("send_raw_tc",
-        "Inject a complete space packet verbatim (hex) per ICD §8.1 raw injection — "
-            + "deliberately without gateway-side validation; negative paths reachable. "
-            + "Subject to the allowlist (decoded content) and TC budget.",
+        "Inject a complete space packet verbatim (hex) per ICD §8.1 raw injection. "
+            + "Authorized on decoded content like any other injection: octets that do "
+            + "not decode per ICD §3 are rejected by the gate and nothing is injected. "
+            + "Octets that decode but are semantically invalid are forwarded, so the "
+            + "spacecraft's own rejection paths stay reachable.",
         Map.of("type", "object",
             "properties", Map.of("hex", Map.of("type", "string",
                 "description", "complete space packet, hex")),
@@ -118,24 +137,76 @@ public final class Gateway {
         args -> {
           String hex = (String) args.get("hex");
           if (hex == null || hex.isBlank()) {
-            return error("MALFORMED_INPUT: hex is required");
+            return plain(error("MALFORMED_INPUT: hex is required"));
           }
-          Integer service = null;
-          Integer subtype = null;
-          try {
-            TcPacket decoded = TcPacket.decode(HexFormat.of().parseHex(
-                hex.replace(" ", "").toLowerCase()));
-            service = decoded.secondaryHeader().serviceType();
-            subtype = decoded.secondaryHeader().messageSubtype();
-          } catch (PacketDecodeException | IllegalArgumentException e) {
-            // Undecodable octets are permitted by the allowlist (ICD §8.4).
-          }
-          String denial = authority.vetInjection(service, subtype).orElse(null);
-          if (denial != null) {
-            return error(denial);
-          }
-          return ok(link.submitRaw(hex));
+          return authorize(hex, () -> link.submitRaw(hex));
         });
+  }
+
+  /**
+   * The single authorization path: gate first, budget second, inject only on a
+   * forward verdict. Both send tools go through here, so there is no route to
+   * the simulator that skips the gate [SIM-REQ-MCP-005].
+   */
+  private ToolOutcome authorize(String hex, Injection injection) throws Exception {
+    byte[] octets;
+    try {
+      octets = HexFormat.of().parseHex(hex.replace(" ", "").toLowerCase());
+    } catch (IllegalArgumentException e) {
+      return plain(error("MALFORMED_INPUT: hex is not a valid octet string"));
+    }
+
+    GateDecision decision = gate.decide(octets);
+    if (decision.forwards()) {
+      String exhausted = authority.consumeBudget().orElse(null);
+      if (exhausted != null) {
+        decision = decision.rejectedInstead(exhausted);
+      }
+    }
+    return switch (decision.outcome()) {
+      case FORWARD -> new ToolOutcome(ok(injection.inject()), decision);
+      case REJECT -> new ToolOutcome(error(decision.reason()), decision);
+      case CONFIRMATION_REQUIRED -> new ToolOutcome(ok(heldPayload(decision)), decision);
+    };
+  }
+
+  /**
+   * The confirmation-required result of ICD §8.4 — a normal structured result,
+   * not a tool error: nothing went wrong, the command is waiting for a human.
+   *
+   * <p>It carries the token and the decoded command, but deliberately not the
+   * command line that would record the confirmation. That belongs to the human
+   * operator and is printed on the gateway's own stderr channel; putting it in
+   * a tool result would hand the party that must not confirm a ready-made
+   * recipe for doing so. Containment on the tool path is what ADR-0007 C8
+   * claims, and there is no reason to spend it cheaply.
+   */
+  private Map<String, Object> heldPayload(GateDecision decision) {
+    System.err.println("CAG HOLD " + decision.token() + " — " + decision.reason()
+        + System.lineSeparator()
+        + "  to authorize, a human runs: java -cp <ops-cag> org.satsim.cag.CagConfirm "
+        + config.confirmDirPath() + " " + decision.token());
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("confirmationRequired", true);
+    payload.put("confirmationToken", decision.token());
+    payload.put("tier", decision.tier().name());
+    payload.put("reason", decision.reason());
+    payload.put("command", Map.of(
+        "service", decision.command().service(),
+        "subtype", decision.command().subtype(),
+        "ackFlags", decision.command().ackFlags(),
+        "appDataHex", decision.command().appDataHex()));
+    payload.put("injected", false);
+    payload.put("howToProceed", "Nothing has been injected. A human operator must record "
+        + "this confirmation out of band — no tool of this interface can record it. "
+        + "Report the token and what the command does, then re-submit the identical "
+        + "telecommand once confirmation is recorded; the gate forwards it exactly once.");
+    return payload;
+  }
+
+  /** Injects the authorized octets and returns the ICD §8.1 response. */
+  private interface Injection {
+    Map<String, Object> inject() throws Exception;
   }
 
   private SyncToolSpecification getPacketLog() {
@@ -161,7 +232,7 @@ public final class Gateway {
             records.add(Map.of("cursor", entry.cursor(), "kind", entry.kind(),
                 "frame", entry.frame()));
           }
-          return ok(Map.of("records", records, "latestCursor", tmLog.latestCursor()));
+          return plain(ok(Map.of("records", records, "latestCursor", tmLog.latestCursor())));
         });
   }
 
@@ -185,10 +256,10 @@ public final class Gateway {
               optionalInt(args, "service"), optionalInt(args, "subtype"));
           TmLog.Entry entry = tmLog.await(after, filter, timeout);
           if (entry == null) {
-            return ok(Map.of("timedOut", true, "timeoutMs", timeout));
+            return plain(ok(Map.of("timedOut", true, "timeoutMs", timeout)));
           }
-          return ok(Map.of("cursor", entry.cursor(), "kind", entry.kind(),
-              "frame", entry.frame()));
+          return plain(ok(Map.of("cursor", entry.cursor(), "kind", entry.kind(),
+              "frame", entry.frame())));
         });
   }
 
@@ -209,19 +280,36 @@ public final class Gateway {
   private SyncResourceSpecification stateResource() {
     return resource(URI_STATE, "gateway-state", "application/json",
         "Gateway state: configured allowlist, remaining session TC budget, "
-            + "ring-buffer cursor bounds.",
+            + "ring-buffer cursor bounds, authority-tier table, and the "
+            + "telecommands currently held for confirmation.",
         () -> write(Map.of(
             "allowlist", List.copyOf(config.allowlist()),
             "remainingBudget", authority.remaining(),
             "firstCursor", tmLog.firstCursor(),
-            "latestCursor", tmLog.latestCursor())));
+            "latestCursor", tmLog.latestCursor(),
+            "classifiedTelecommands", ClassificationTable.entries(),
+            "pendingConfirmations", gate.pendingHolds())));
   }
 
   // ---- plumbing -------------------------------------------------------
 
+  /**
+   * A tool result together with the gate decision behind it, if the tool
+   * authorized an injection. The decision travels with the result so the ops
+   * log can record it as evidence [SIM-REQ-CAG-006] without the plumbing having
+   * to guess what happened.
+   */
+  private record ToolOutcome(CallToolResult result, GateDecision decision) {
+  }
+
+  /** A result from a tool that authorizes nothing, so carries no gate decision. */
+  private static ToolOutcome plain(CallToolResult result) {
+    return new ToolOutcome(result, null);
+  }
+
   /** A tool body: §8.4 semantics in, JSON-able result out. */
   private interface ToolBody {
-    CallToolResult apply(Map<String, Object> args) throws Exception;
+    ToolOutcome apply(Map<String, Object> args) throws Exception;
   }
 
   private SyncToolSpecification tool(String name, String description,
@@ -234,20 +322,21 @@ public final class Gateway {
     return new SyncToolSpecification(tool, (exchange, request) -> {
       Map<String, Object> args =
           request.arguments() == null ? Map.of() : request.arguments();
-      CallToolResult result;
+      ToolOutcome outcome;
       try {
-        result = body.apply(args);
+        outcome = body.apply(args);
       } catch (WebApiLink.LinkException | IllegalArgumentException e) {
-        result = error(e.getMessage());
+        outcome = plain(error(e.getMessage()));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        result = error("interrupted");
+        outcome = plain(error("interrupted"));
       } catch (Exception e) {
-        result = error("internal gateway error: " + e);
+        outcome = plain(error("internal gateway error: " + e));
       }
+      CallToolResult result = outcome.result();
       opsLog.record(name, args,
           Boolean.TRUE.equals(result.isError())
-              ? "error: " + textOf(result) : "ok", tmLog.obt());
+              ? "error: " + textOf(result) : "ok", tmLog.obt(), outcome.decision());
       return result;
     });
   }

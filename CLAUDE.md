@@ -14,7 +14,14 @@ ECSS-E-ST-40C / Q-ST-80C process (Category D ground software) — see docs/sdp.m
 - `sim-test-support` — `@Requirement` / `@TestCase` annotations for traceability.
 - `mcp-gateway` — MCP operator gateway (ICD §8.4, SCR-008): Spring-free
   ground-segment client of the simulator web API, exposing TM/TC as MCP
-  tools over stdio for AI operator clients.
+  tools over stdio for AI operator clients. Holds no authorization logic.
+- `ops-cag` — Command Authorization Gate (ADR-0007, SCR-010): the one
+  configuration item classified to the **Category B technical bar** (SDP
+  §1.1), inside the otherwise Category D product. JDK + `pus-core` only.
+  Decodes every telecommand, classifies it by content, and decides
+  forward / reject / hold-for-confirmation. Treat changes here as
+  safety-relevant: keep it small, deterministic, dependency-free, and
+  never widen a claim beyond ADR-0007 C8.
 
 ## Authoritative documents (read before implementing)
 
