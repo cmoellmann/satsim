@@ -1,9 +1,10 @@
 # SCR-010 — Command Authorization Gate (Cat B CI): extract, content-based classification, in-gate confirmation (new increment M1h)
 
-- Status: Approved (proposal PR #88 merged 2026-07-25; disposition PR #89;
-  specification PR #98 — ICD Issue 8 §8.4, SDP §1.1/§2.1/§4, SRS
-  SIM-REQ-CAG-001…006, SVS SIM-TC-048…052, with deltas F-2…F-5 in §5.
-  Implementation follows in a later PR per the SCR-008/009 pattern)
+- Status: **Implemented** (proposal PR #88 merged 2026-07-25; disposition PR
+  #89; specification PR #98 — ICD Issue 8 §8.4, SDP §1.1/§2.1/§4, SRS
+  SIM-REQ-CAG-001…006, SVS SIM-TC-048…052; implementation PR #99 — `ops-cag`
+  module, gateway refactor, SIM-TC-048…052, SDD §3.6. Deltas F-2…F-8 in §5.
+  Gate record: [M1h test report](../test-reports/M1h-report.md))
 - Date: 2026-07-25
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ADR (ADR-0007 +

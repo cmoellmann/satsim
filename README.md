@@ -149,19 +149,16 @@ them down first.
 | [`M1e`](https://github.com/cmoellmann/satsim/releases/tag/M1e) | 2026-07-19 | Repository link + mobile usability ([SCR-007](docs/scr/SCR-007-repo-link-mobile.md)): console→repo link, layout reflow down to 360 px viewports with in-card log scrolling | [M1e report](docs/test-reports/M1e-report.md) |
 | [`M1f`](https://github.com/cmoellmann/satsim/releases/tag/M1f) | 2026-07-20 | MCP operator gateway ([SCR-008](docs/scr/SCR-008-mcp-gateway.md)): TM/TC as MCP tools for AI operator clients ([ICD §8.4](docs/icd.md)) — an AI agent flies the spacecraft through the same interface as any operator, demo recorded in the gate report | [M1f report](docs/test-reports/M1f-report.md) |
 | [`M1g`](https://github.com/cmoellmann/satsim/releases/tag/M1g) | 2026-07-25 | Shared-traffic console ([SCR-009](docs/scr/SCR-009-tc-broadcast.md)): every telecommand broadcast to all observers as an [ICD §8.2](docs/icd.md) `tc` frame — remote commands marked in the console, served to AI operators via `get_packet_log` | [M1g report](docs/test-reports/M1g-report.md) |
+| [`M1h`](https://github.com/cmoellmann/satsim/releases/tag/M1h) | 2026-07-26 | Command Authorization Gate ([SCR-010](docs/scr/SCR-010-cag-foundation.md), [ADR-0007](docs/adr/ADR-0007-command-authorization-gate.md)): new `ops-cag` module — the one configuration item engineered to the ECSS **Category B technical bar** inside a Category D product. Every telecommand decided on its decoded content, fail-closed on anything unclassifiable, state-changing commands held until a human confirms out of band — a barrier no MCP client can reach or remove | [M1h report](docs/test-reports/M1h-report.md) |
 
-Currently: **136/136 tests green**, pus-core line coverage **97 %**
+Currently: **160/160 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
-**Next (specified, not yet built):** the **Command Authorization Gate**,
-hardening the operator gateway to the ECSS Category B technical bar — `M1h`
-foundation ([SCR-010](docs/scr/SCR-010-cag-foundation.md), specified in ICD
-Issue 8 / `SIM-REQ-CAG-001…006` / `SIM-TC-048…052`) + `M1i` assurance
-([SCR-011](docs/scr/SCR-011-cag-assurance.md)). The gate decides every
-telecommand on its decoded content, refuses anything it cannot classify, and
-holds state-changing commands until a human confirms them through a channel no
-AI client can reach — so the safety barrier stops depending on which MCP client
-happens to be attached. Then **M2** — TCP length-framed space-packet link
-(ICD §8), the door for external clients and Yamcs.
+**Next (approved, not yet built):** `M1i` — the Category B assurance bar for
+the gate ([SCR-011](docs/scr/SCR-011-cag-assurance.md)): hazard analysis,
+software FMEA over the command path, 100 % statement and decision coverage, a
+robustness suite, the scenario-based operator-eval harness, and the
+direct-REST bypass demonstration. Then **M2** — TCP length-framed space-packet
+link (ICD §8), the door for external clients and Yamcs.
 
 ## Document set (ECSS compliant)
 
@@ -249,10 +246,11 @@ growth:
 
 - **Agentic command & control, next steps**: the MCP operator gateway is
   live since M1f ([SCR-008](docs/scr/SCR-008-mcp-gateway.md), concept in
-  the [design note](docs/notes/mcp-gateway-concept.md)); hardening it into a
-  verifiable **Command Authorization Gate** engineered to the ECSS Category B
-  technical bar is planned ([ADR-0007](docs/adr/ADR-0007-command-authorization-gate.md),
-  [SCR-010](docs/scr/SCR-010-cag-foundation.md), increments M1h/M1i). Open
+  the [design note](docs/notes/mcp-gateway-concept.md)); the verifiable
+  **Command Authorization Gate** engineered to the ECSS Category B technical bar
+  is built as of M1h ([ADR-0007](docs/adr/ADR-0007-command-authorization-gate.md),
+  [SCR-010](docs/scr/SCR-010-cag-foundation.md)), with its assurance bar to
+  follow in M1i ([SCR-011](docs/scr/SCR-011-cag-assurance.md)). Open
   extensions are a network-exposed MCP endpoint for the public demo instance,
   a separated test-conductor tool namespace (fault injection, time control),
   a scenario-based operator-eval harness, and a **project-owned reference
