@@ -38,13 +38,14 @@ SIM-REQ-UI-017/018, amended SIM-REQ-MCP-003, new SVS cases SIM-TC-046
 | Criterion | Status | Evidence |
 |---|---|---|
 | SIM-TC-046 passes (automated: passive WS session receives the `tc` frame for another client's injection, fields per §8.1; gateway `get_packet_log` returns the `tc` record) | PASS | `org.satsim.sim.mcp.McpGatewaySvsTest#injectionsAreBroadcastAsTcFramesAndServedByPacketLog`: two passive WS observers plus the gateway as a third, non-submitting observer; green in `./mvnw verify` (tables below). |
-| SIM-TC-047 passes (manual: remote TC rows marked, no own-row duplication) | PENDING | §"Manual Checklist" below — awaiting execution and verdict by the project lead. |
+| SIM-TC-047 passes (manual: remote TC rows marked, no own-row duplication) | PASS | §"Manual Checklist" below — executed and verdict recorded 2026-07-26, C. Möllmann. |
 | Amended SIM-TC-027..029 re-verified | PASS | `HmiWebApiTest` 3/3 green: SIM-TC-028 additionally asserts the `injectionId` contract of the §8.1 response, SIM-TC-029 the one `tc` frame per stimulus in the expected traffic. SIM-TC-027 unchanged by design — it injects nothing, so its expected traffic gains no `tc` frame (recorded in the SVS change log). |
 | Existing automated suite green | PASS | `./mvnw verify` green at the baseline commit: 136 tests, 0 failures (tables below); CI green on merged PR #94/#95. |
 | SRS M1g-scope requirements all traced+passed | PASS | Traceability matrix below; TraceabilityCheck M1g gate: 0 findings → OK. |
 
 Per the M1b–M1f precedent, the gate record closes with the commit that
-records the verdicts; the `M1g` tag is proposed on that merge commit.
+records the verdicts; the `M1g` tag is proposed on the merge commit of the
+SIM-TC-047 verdict PR (see §"Manual Checklist").
 
 ## Test Results Summary
 
@@ -124,7 +125,7 @@ coverage target per SDP §2.1 tailoring.
 | Req ID | Title | Ver. | Scope | SVS Case(s) | Test Method(s) | Verdict |
 |---|---|---|---|---|---|---|
 | SIM-REQ-UI-017 | injectionId assignment, §8.2 `tc` broadcast, ordering before caused frames | T | M1g | SIM-TC-046 | McpGatewaySvsTest.injectionsAreBroadcastAsTcFramesAndServedByPacketLog | PASS |
-| SIM-REQ-UI-018 | Console: one row per injection, remote marking, causal ordering | M | M1g | SIM-TC-047 | Manual checklist (below) | PENDING |
+| SIM-REQ-UI-018 | Console: one row per injection, remote marking, causal ordering | M | M1g | SIM-TC-047 | Manual checklist (below) | PASS |
 
 Amended in M1g scope: **SIM-REQ-MCP-003** (ring buffer serves `tm`,
 `rejection` and `tc`) — re-verified by SIM-TC-043/044/046, all green.
@@ -144,7 +145,7 @@ gate record).
 
 ## Manual Checklist
 
-### SIM-TC-047 (remote TC rows without own-row duplication) — PENDING
+### SIM-TC-047 (remote TC rows without own-row duplication) — PASS, 2026-07-26, C. Möllmann
 
 Setup: simulator at `http://localhost:8090` (interactive 1:1 pacing), two
 console windows W1 and W2 on it, plus a third-party injection from outside
@@ -152,16 +153,21 @@ any console.
 
 | Step | Expected | Observed |
 |---|---|---|
-| Ping composed and sent in W1 | W1: exactly one TC row, unmarked; no second, remote-marked row for the same injection | *(to be recorded)* |
-| Same injection observed in W2 | W2: exactly one TC row, visibly marked `remote` | *(to be recorded)* |
-| Ping sent in W2 | mirrored result: unmarked in W2, `remote` in W1 | *(to be recorded)* |
-| Injection from a client without a console (`curl` against `POST /api/tc`, or MCP `send_tc`) | marked `remote` in **both** windows | *(to be recorded)* |
-| Causal ordering of the remote row (SIM-REQ-UI-014) | its TM(1,1)/TM(17,2)/TM(1,7) responses stand above it in the newest-first log | *(to be recorded)* |
-| Detail view of a remote row | same decoded field breakdown as an own row | *(to be recorded)* |
+| Ping composed and sent in W1 | W1: exactly one TC row, unmarked; no second, remote-marked row for the same injection | as expected |
+| Same injection observed in W2 | W2: exactly one TC row, visibly marked `remote` | as expected |
+| Ping sent in W2 | mirrored result: unmarked in W2, `remote` in W1 | as expected |
+| Injection from a client without a console (`curl` against `POST /api/tc`, or MCP `send_tc`) | marked `remote` in **both** windows | as expected |
+| Causal ordering of the remote row (SIM-REQ-UI-014) | its TM(1,1)/TM(17,2)/TM(1,7) responses stand above it in the newest-first log | as expected |
+| Detail view of a remote row | same decoded field breakdown as an own row | as expected |
 
-Verdict, date and name are recorded here once the project lead has
-executed the checklist; the gate record is merged only with the verdict in
-place.
+Executed by the project lead on a locally run simulator (`./mvnw -pl
+simulator spring-boot:run`, two console windows plus a `curl` injection
+from outside any console); all steps reported as expected, verdict PASS.
+
+Sequence note: the gate-record PR (#96) was merged before this verdict was
+written down, so the verdict is recorded by this follow-up PR. The `M1g`
+tag is therefore proposed on **this** merge commit — the first commit at
+which every M1g exit criterion carries a recorded verdict.
 
 ## Notes and Deviations
 
