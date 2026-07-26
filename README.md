@@ -152,11 +152,16 @@ them down first.
 
 Currently: **136/136 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
-**Next (approved, not yet built):** the **Command Authorization Gate**,
+**Next (specified, not yet built):** the **Command Authorization Gate**,
 hardening the operator gateway to the ECSS Category B technical bar — `M1h`
-foundation ([SCR-010](docs/scr/SCR-010-cag-foundation.md)) + `M1i` assurance
-([SCR-011](docs/scr/SCR-011-cag-assurance.md)). Then **M2** — TCP length-framed
-space-packet link (ICD §8), the door for external clients and Yamcs.
+foundation ([SCR-010](docs/scr/SCR-010-cag-foundation.md), specified in ICD
+Issue 8 / `SIM-REQ-CAG-001…006` / `SIM-TC-048…052`) + `M1i` assurance
+([SCR-011](docs/scr/SCR-011-cag-assurance.md)). The gate decides every
+telecommand on its decoded content, refuses anything it cannot classify, and
+holds state-changing commands until a human confirms them through a channel no
+AI client can reach — so the safety barrier stops depending on which MCP client
+happens to be attached. Then **M2** — TCP length-framed space-packet link
+(ICD §8), the door for external clients and Yamcs.
 
 ## Document set (ECSS compliant)
 
@@ -257,6 +262,16 @@ growth:
   eval scenarios scriptable in CI. Today's operator client (Claude Code / any
   MCP client) is untrusted third-party software by construction — the gate,
   not the agent, carries the assurance.
+- **Console-mediated command confirmation**: in M1h the gate holds every
+  state-changing telecommand and releases it only against a confirmation
+  recorded through a channel no MCP client can reach. The natural successor is
+  to move that confirmation into the M1g shared-traffic console, so the human
+  approves while watching telemetry that never passed through the agent —
+  which is what makes a confirmation a real barrier rather than a nominal one
+  ([ADR-0007](docs/adr/ADR-0007-command-authorization-gate.md) C8,
+  "confirmation on false pretenses"). Deferred from M1h on scope: it needs a
+  REST endpoint, an ICD §8.2 frame kind and frontend work
+  ([SCR-010](docs/scr/SCR-010-cag-foundation.md) §5 F-4).
 - **Further PUS services**: ST[5] event reporting, ST[11] time-tagged
   commanding, ST[12] on-board monitoring.
 - **Subsystem simulation**: modelled spacecraft subsystems (e.g. power,

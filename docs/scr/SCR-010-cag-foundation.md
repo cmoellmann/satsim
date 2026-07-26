@@ -1,8 +1,9 @@
 # SCR-010 — Command Authorization Gate (Cat B CI): extract, content-based classification, in-gate confirmation (new increment M1h)
 
-- Status: Approved (proposal PR #88 merged 2026-07-25; disposition PR #89.
-  ICD/SRS/SVS + SDP classification spec updates and implementation follow in
-  later PRs per the SCR-008/009 pattern)
+- Status: Approved (proposal PR #88 merged 2026-07-25; disposition PR #89;
+  specification PR #98 — ICD Issue 8 §8.4, SDP §1.1/§2.1/§4, SRS
+  SIM-REQ-CAG-001…006, SVS SIM-TC-048…052, with deltas F-2…F-5 in §5.
+  Implementation follows in a later PR per the SCR-008/009 pattern)
 - Date: 2026-07-25
 - Originator: project lead (C. Möllmann); drafted by AI assistant per SDP §6
 - Affected configuration items: SATSIM-SDP, SATSIM-ADR (ADR-0007 +
@@ -92,9 +93,9 @@ direct-REST bypass test, and the AI-mediated independence experiment — all
 | SDP §1 / §2.1 | New per-CI classification note in §1 (product Cat D; CAG engineered to the Cat B technical bar). §2.1 tailoring matrix: the "ISVV — Not applicable (Cat D)" row gains the CAG exception and the **independence deviation** (no compliance claim, ADR-0007 C9). |
 | SDP §4 | New milestone row **M1h** inserted between M1g and M2 (label scheme per SCR-001). M2…M5 unchanged, shifted one increment later. (M1i is added by SCR-011.) |
 | ADR | **ADR-0007 proposed** (per-CI classification & containment; §5 limits + independence deviation verbatim). New DECISION-LOG row. On disposition it becomes Accepted and immutable (rule 4). |
-| ICD | **None.** No wire-format change, no reference vectors touched. The CAG operates on the existing §8.1/§8.4 contract; the "confirmation required" result is an MCP tool-result shape (gateway/CAG concern), documented in the SDD, not a §8 wire change. |
+| ICD | *As dispositioned:* **None** — no wire-format change, no reference vectors touched; the "confirmation required" result was judged an MCP tool-result shape (gateway/CAG concern), documented in the SDD, not a §8 wire change. *At spec time this proved too narrow:* **ICD Issue 8** amends §8.4 only — see §5 **F-2** (the gate's three outcomes are observable at the §8.4 boundary, which SIM-REQ-MCP-001 binds) and **F-3** (the §8.4 carve-out permitting undecodable raw octets is withdrawn). Space link §2–§7, web API §8.1/§8.2 and all reference vectors remain untouched, and no §8.4 tool is added, renamed or removed. |
 | SRS | New requirement group (rule-3 proposals, scope M1h): **SIM-REQ-CAG-001…006** as sketched in §1. Existing requirements unamended (SIM-REQ-MCP-* keep describing the gateway; the CAG requirements are new). |
-| SVS | New automated cases **SIM-TC-048…052** (scope M1h) as sketched in §1. Existing SIM-TC-041..045 (gateway) retained; adjusted only if the extraction changes an observable tool result, recorded in the SVS change log. |
+| SVS | New automated cases **SIM-TC-048…052** (scope M1h) as sketched in §1. Existing SIM-TC-041..045 (gateway) retained; **SIM-TC-044 amended** at spec time (V-NEG-01 injected over the §8.1 REST path instead of `send_raw_tc`, coverage unchanged — see §5 F-3), SIM-TC-045 reviewed and left unchanged. Recorded in the SVS change log. |
 | CLAUDE.md | Module map gains **`ops-cag`** (dependency-free CAG CI). Rule 5 ("no Spring outside `simulator`") holds — `ops-cag` is Spring-free. Controlled-document change via the implementing PR (rule 7). |
 | SRF (reuse file) | **No new third-party dependency.** `ops-cag` reuses `pus-core` (internal). Recorded for completeness in the implementing PR; no license situation to present (rule 8 n/a). |
 | SDD | New module section at implementation: `ops-cag` structure, the classification table, the HOLD/confirmation state machine and restart behaviour, the gateway↔CAG seam, extended ops-log record shape. |
@@ -127,3 +128,76 @@ direct-REST bypass test, and the AI-mediated independence experiment — all
   enforcement verifiable — the operator-side twin of SIM-REQ-LINK-003, speaking
   MCP) was considered and **deferred as a named future extension** (README
   roadmap; would enter via its own SCR), not pulled into M1h/M1i scope.
+
+- **F-2 (spec PR, 2026-07-26) — the ICD is affected after all: §8.4 amended
+  (ICD Issue 8).** §3 of this SCR dispositioned "ICD: None", reasoning that the
+  confirmation-required result is a tool-result shape belonging in the SDD.
+  Writing the specification showed that reasoning does not survive contact with
+  SIM-REQ-MCP-001, which binds the gateway to offer "exactly the tools and
+  resources of ICD §8.4 **with the semantics defined there**". The gate changes
+  those semantics observably: §8.4 today documents two outcomes for an injection
+  (injected, or "a violating call returns an MCP tool error and injects
+  nothing"), and the CAG introduces a third — held, nothing injected, a token
+  returned. Leaving that out of §8.4 would either falsify SIM-REQ-MCP-001 or
+  push the operator's contract into a descriptive document (the SDD), where an
+  external MCP client implementer would never look. Disposition: **ICD Issue 8,
+  confined to §8.4** — the three outcomes tabled, the gateway-state resource
+  extended with pending holds, and the confirmation channel declared explicitly
+  outside the contract and unreachable through MCP. Delta vs §3, no wire-format
+  change: §2–§7, §8.1, §8.2 and every reference vector are untouched, and the
+  §8.4 tool and resource *sets* are unchanged.
+
+- **F-3 (spec PR, 2026-07-26) — ADR-0007 C3 contradicts the M1f baseline over
+  undecodable raw octets; resolved in favour of C3.** ADR-0007 C3 requires that
+  undecodable telecommands be "rejected, never forwarded". ICD §8.4 (Issue 6)
+  and SIM-REQ-MCP-005 specify the opposite for `send_raw_tc`: raw injection is
+  "deliberately without gateway-side validation of the octets (negative paths
+  reachable)", and undecodable octets "are permitted, they exercise the §6.3
+  rejection path". Verified in code: `Gateway.java` leaves `service`/`subtype`
+  null when `TcPacket.decode` throws, and `Authority.vetInjection(null, null)`
+  permits. The conflict is not abstract — **SIM-TC-044** is a passing M1f case
+  built on the permissive behaviour. Both directions were put to the project
+  lead on 2026-07-26 with their costs; **strict C3 was chosen**: the gate never
+  forwards octets it could not classify. Consequences, all in this PR: ICD §8.4
+  withdraws the carve-out (Issue 8); SIM-REQ-MCP-005 is amended; SIM-TC-044 is
+  amended to inject V-NEG-01 over the §8.1 REST interface, which the gate does
+  not mediate — the case keeps exactly the coverage it had (a rejection frame
+  observed on the §8.2 stream is recorded and served by `get_packet_log`), only
+  its injection path changes. The loss is narrower than it first appears:
+  decodable-but-invalid telecommands still reach the spacecraft, so V-NEG-02
+  (unsupported PUS version) classifies as TC(17,1), forwards, and yields its
+  TM(1,2) exactly as before — `TcSecondaryHeader.decode` deliberately does not
+  enforce `pusVersion == 2`. Only octets that fail to decode at all are now
+  refused on the MCP path. SIM-TC-049 verifies both halves of that contrast.
+
+- **F-4 (spec PR, 2026-07-26) — the confirmation channel: out-of-band channel
+  chosen; console-mediated confirmation deferred.** Neither ADR-0007 C5 nor §1
+  of this SCR states *how* a human confirmation reaches the gate, and the choice
+  decides whether the increment fixes the §4 finding or reproduces it. A
+  confirmation exposed as an MCP tool is one the agent can call itself, which
+  would put the barrier back behind the MCP client's permission prompt — the
+  precise arrangement ADR-0007 DA4 rejects. Three options were put to the
+  project lead on 2026-07-26; the decision is: **for M1h, confirmations arrive
+  through a channel that is not an MCP tool** — the gate holds the injection and
+  returns a token, and a human records the confirmation out-of-band, so the
+  client has no means of expressing a confirmation at all (asserted negatively
+  by SIM-TC-050, which requires that `tools/list` still return exactly the five
+  §8.4 tools). Specified in SIM-REQ-CAG-005 without naming a transport, so the
+  requirement outlives the mechanism. **Deferred, recorded on the README
+  roadmap:** confirmation in the M1g shared-traffic console, where the human
+  approves while looking at telemetry that did not pass through the agent —
+  directly addressing the "confirmation on false pretenses" row of ADR-0007 C8,
+  which already names that console as arguably such a path. Excluded from M1h on
+  scope, not on merit: it needs a REST endpoint, an §8.2 frame kind and frontend
+  work, making the gate depend on the simulator and the increment exceed one
+  session. It pairs naturally with the reference operator client deferred in
+  F-1, and would enter via its own SCR.
+
+- **F-5 (spec PR, 2026-07-26) — editorial corrections to the SDP.** The SDP was
+  amended for this increment and carried stale content that the new §1.1 would
+  have contradicted: §7 listed ISVV artifacts as consciously dropped without the
+  Category B exception (corrected, with the deviation restated); §3's module
+  list never gained `mcp-gateway` at M1f (added, together with `ops-cag`); §7's
+  status column named ICD Issue 1, ADR-0001…0006 and SCR-001…005 (corrected to
+  Issue 8, ADR-0001…0007 and SCR-001…011). Editorial only — no disposition is
+  changed.
