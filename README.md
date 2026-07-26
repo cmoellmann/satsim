@@ -16,10 +16,10 @@ discipline work together.
 > compliance practice in any domain where being wrong has consequences.
 
 **▶ [Try it live: satsim.onrender.com](https://satsim.onrender.com)** — one
-shared spacecraft for all visitors: everyone sees the same live telemetry,
-including the spacecraft's responses to each other's telecommands (the
-command packets themselves are visible only in the sending session — the
-web API broadcasts TM and rejections, not TCs). Hosted on a free tier that sleeps when
+shared spacecraft for all visitors: everyone sees the same live traffic —
+the telemetry, and since M1g every telecommand as it is sent, whether it
+comes from another visitor's browser or from an AI operator on the MCP
+gateway, marked `remote` in the consoles that did not send it. Hosted on a free tier that sleeps when
 idle, so the first visit may take up to a minute to wake the simulator
 (fresh boot, on-board time from zero). The instance always runs the latest
 master that passed the full CI gate.
@@ -148,14 +148,13 @@ them down first.
 | [`M1d`](https://github.com/cmoellmann/satsim/releases/tag/M1d) | 2026-07-19 | HMI presentation ([SCR-006](docs/scr/SCR-006-hmi-presentation.md)) from the first [SPR campaign](docs/spr/SPR-LOG.md): causal log ordering, failure-code column, numeric dropdowns, widened layout | [M1d report](docs/test-reports/M1d-report.md) |
 | [`M1e`](https://github.com/cmoellmann/satsim/releases/tag/M1e) | 2026-07-19 | Repository link + mobile usability ([SCR-007](docs/scr/SCR-007-repo-link-mobile.md)): console→repo link, layout reflow down to 360 px viewports with in-card log scrolling | [M1e report](docs/test-reports/M1e-report.md) |
 | [`M1f`](https://github.com/cmoellmann/satsim/releases/tag/M1f) | 2026-07-20 | MCP operator gateway ([SCR-008](docs/scr/SCR-008-mcp-gateway.md)): TM/TC as MCP tools for AI operator clients ([ICD §8.4](docs/icd.md)) — an AI agent flies the spacecraft through the same interface as any operator, demo recorded in the gate report | [M1f report](docs/test-reports/M1f-report.md) |
+| [`M1g`](https://github.com/cmoellmann/satsim/releases/tag/M1g) | 2026-07-25 | Shared-traffic console ([SCR-009](docs/scr/SCR-009-tc-broadcast.md)): every telecommand broadcast to all observers as an [ICD §8.2](docs/icd.md) `tc` frame — remote commands marked in the console, served to AI operators via `get_packet_log` | [M1g report](docs/test-reports/M1g-report.md) |
 
-Currently: **135/135 tests green**, pus-core line coverage **97 %**
+Currently: **136/136 tests green**, pus-core line coverage **97 %**
 (indicative target 80 %), traceability gate at 0 findings.
-**Next (approved, not yet built):** `M1g` shared-traffic console
-([SCR-009](docs/scr/SCR-009-tc-broadcast.md)) — every telecommand broadcast to
-all observers; then the **Command Authorization Gate**, hardening the operator
-gateway to the ECSS Category B technical bar — `M1h` foundation
-([SCR-010](docs/scr/SCR-010-cag-foundation.md)) + `M1i` assurance
+**Next (approved, not yet built):** the **Command Authorization Gate**,
+hardening the operator gateway to the ECSS Category B technical bar — `M1h`
+foundation ([SCR-010](docs/scr/SCR-010-cag-foundation.md)) + `M1i` assurance
 ([SCR-011](docs/scr/SCR-011-cag-assurance.md)). Then **M2** — TCP length-framed
 space-packet link (ICD §8), the door for external clients and Yamcs.
 
@@ -172,7 +171,7 @@ space-packet link (ICD §8), the door for external clients and Yamcs.
 | Software Change Requests (SCR) | [docs/scr/SCR-LOG.md](docs/scr/SCR-LOG.md) | Change-control register; each SCR carries a per-document impact analysis and a recorded disposition |
 | Software Problem Reports (SPR) | [docs/spr/SPR-LOG.md](docs/spr/SPR-LOG.md) | Problem/nonconformance register (SCR-005): observed vs expected behavior, cause analysis, disposition, verified closure |
 | Software Reuse File (SRF) | [docs/reuse-file.md](docs/reuse-file.md) | Dependency/license register (Q-ST-80C style): version, scope, SPDX license, approval record |
-| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records, one per closed milestone (M0 … [M1e](docs/test-reports/M1e-report.md)): test results, coverage, traceability matrix, human review verdicts |
+| Milestone test reports | [docs/test-reports/](docs/test-reports/) | Gate records, one per closed milestone (M0 … [M1g](docs/test-reports/M1g-report.md)): test results, coverage, traceability matrix, human review verdicts |
 | AI working rules | [CLAUDE.md](CLAUDE.md) | Controlled document: project context and the hard rules every AI session runs under |
 | AI agent definitions | [.claude/agents/README.md](.claude/agents/README.md) | Tiered delegation setup: implementer + scribe agents with bounded authority |
 

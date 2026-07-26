@@ -1,7 +1,7 @@
 # SCR-009 — Shared-traffic console: broadcast injected TCs as §8.2 frames (new increment M1g)
 
-- Status: Approved (spec PR #86 merged 2026-07-20; ICD/SRS/SVS spec
-  updates follow in a second PR per the SCR-001…003 pattern)
+- Status: Implemented (spec PR #86 merged 2026-07-20; ICD Issue 7 + SRS +
+  SVS in PR #94; implementation + SDD in PR #95, both merged 2026-07-25)
 - Date: 2026-07-20
 - Originator: project lead (C. Möllmann), from an observation during the
   M1f recorded demo; drafted by AI assistant per SDP §6
