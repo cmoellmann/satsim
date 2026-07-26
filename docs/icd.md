@@ -1,14 +1,15 @@
 # SatSim Space–Ground Interface Control Document (ICD)
 
-- Configuration item: SATSIM-ICD, Issue 7 (draft)
+- Configuration item: SATSIM-ICD, Issue 8 (draft)
 - Applicable: ECSS-E-ST-70-41C (PUS-C), CCSDS 133.0-B (Space Packet Protocol), CCSDS 301.0-B (Time Codes)
-- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset), SCR-003 (HMI/web API), SCR-008 (MCP operator gateway), SCR-009 (TC broadcast)
+- Related decisions: ADR-0002 (strict PUS-C), ADR-0003 (single APID), ADR-0004 (CUC 4+2), ADR-0007 (command authorization gate); SCR-001 (ST[3] subset), SCR-002 (ST[1] subset), SCR-003 (HMI/web API), SCR-008 (MCP operator gateway), SCR-009 (TC broadcast), SCR-010 (CAG foundation)
 - Issue 2 (draft) changes vs Issue 1: added §9 (ST[3] housekeeping subset), reference vectors §6.4/§6.5, OP-3; open points renumbered §9→§10. Per SCR-001.
 - Issue 3 (draft) changes vs Issue 2: added §10 (ST[1] request verification subset), reference vectors §6.6; V-NEG-02 clarified with explicit bytes (CRC recomputed — as previously worded the packet failed the CRC check before the version check); frontend default ack flags §3 updated; OP-1 closed, OP-3 re-targeted to M1b; open points renumbered §10→§11. Per SCR-002.
 - Issue 4 (draft) changes vs Issue 3: §8 web API restructured and extended — WebSocket frame-type discriminator `kind` (breaking change vs. the Issue 3 TM-only frame), time frames, rejection frames, extended `POST /api/tc` response. Space-link packet definitions (§2–§7) and all reference vectors unchanged. Per SCR-003.
 - Issue 5 (draft) changes vs Issue 4: OP-3 resolved (M1b, per SCR-001) — ST[3] semantic errors now yield TM(1,8) failed-completion reports: §9.1/§9.2/§9.3 error handling formalized, §10.2 completion rule updated, §10.4 failure codes 0x0004–0x0008 added, new reference vectors §6.7 (V-NEG-03, V-TM-09); OP-3 closed in §11. Existing vectors unchanged.
 - Issue 6 (draft) changes vs Issue 5: added §8.4 (MCP operator gateway tool contract, ground segment). Space-link packet definitions (§2–§7), web API (§8.1/§8.2) and all reference vectors unchanged. Configuration-item line corrected from the stale "Issue 4" to the current issue (editorial; the Issue 5 changes had been applied without bumping the line). Per SCR-008.
 - Issue 7 (draft) changes vs Issue 6: TC traffic made observable to all ground observers — §8.2 frame table gains the `tc` kind (one frame per §8.1 injection, broadcast to all sessions), §8.1 response gains the `injectionId` correlation handle carried by that frame, §8.4 `get_packet_log` filter enum gains `tc`. Additive: no existing field changes meaning, no frame kind is removed. **Space-link packet definitions (§2–§7) and all reference vectors unchanged.** Per SCR-009 (the `injectionId` field is the delta recorded in SCR-009 §5 against that SCR's impact analysis).
+- Issue 8 (draft) changes vs Issue 7: §8.4 authority bounds restated for the Command Authorization Gate (ADR-0007) — the gate decides every injection on decoded content alone with exactly three outcomes (forward / reject / confirmation required), the confirmation channel is explicitly outside this contract and unreachable through MCP, and the Issue 6 carve-out permitting **undecodable raw octets** through `send_raw_tc` is **withdrawn** (fail-closed, ADR-0007 C3); the gateway-state resource additionally lists pending holds. §8.4 tool and resource *sets* are unchanged — no tool is added, renamed or removed. **Space-link packet definitions (§2–§7), web API (§8.1/§8.2) and all reference vectors unchanged.** Per SCR-010 (the §8.4 amendment is the delta recorded in SCR-010 §5 F-2 against that SCR's "ICD: None" impact analysis; the withdrawn carve-out is F-3).
 
 > **RULE (binding, see CLAUDE.md):** The reference vectors in §6 are the authoritative
 > byte-level contract. Implementation and tests conform to this document; this
@@ -299,7 +300,7 @@ Tools:
 |---|---|---|
 | `send_tc` | `service`, `subtype`, `ackFlags?`, `appDataHex?` | Structured compose and injection per §8.1 (omitted fields default per §8.1); result carries the full §8.1 response: `hex`, injection OBT, consumed sequence count, decoded fields. |
 | `preview_tc` | as `send_tc` | §8.1 preview: returns `hex` only; nothing injected, no sequence count consumed. |
-| `send_raw_tc` | `hex` | Raw injection per §8.1, deliberately without gateway-side validation of the octets (negative paths reachable). Result as `send_tc`. |
+| `send_raw_tc` | `hex` | Raw injection per §8.1 of operator-supplied octets. Result as `send_tc`. Subject to the authority bounds below like every other injection: from Issue 8 octets that do not decode per §3 are **rejected by the gate** and nothing is injected (the Issue 6 wording, which deliberately let undecodable octets through, is withdrawn). Octets that decode but are semantically invalid — e.g. V-NEG-02, an unsupported PUS version — classify normally and are forwarded, so the §10.2 spacecraft rejection paths stay reachable; the §6.3 paths that fail decoding remain reachable over the §8.1 REST interface, which the gate does not mediate. |
 | `get_packet_log` | `afterCursor?`, `filter?` (`kind` ∈ tm, rejection, tc; `service?`, `subtype?`) | Ordered records of received §8.2 `tm`, `rejection` and `tc` frames from the gateway ring buffer, each carrying a monotonic cursor; paged from `afterCursor` (default: buffer start). `tc` records (Issue 7) make other operators' commanding visible to the AI operator, including injections the gateway did not submit itself. |
 | `await_tm` | `filter` (as above, TM only), `timeoutMs`, `afterCursor?` | Blocks until the first TM record matching `filter` with cursor beyond `afterCursor` (default: call time) arrives and returns it, or returns a distinct timeout result after `timeoutMs`. |
 
@@ -309,15 +310,36 @@ Resources:
 |---|---|
 | ICD | This document, verbatim — the operator's manual. |
 | OBT | Current on-board time per the latest §8.2 `time` frame. |
-| Gateway state | Configured allowlist, remaining session TC budget, ring-buffer cursor bounds. |
+| Gateway state | Configured allowlist, remaining session TC budget, ring-buffer cursor bounds, and (Issue 8) the tokens and decoded commands of the injections currently held for confirmation. |
 
-Authority bounds, enforced by the gateway (§8.1 behavior untouched): a
-configurable (service, subtype) allowlist applied to the decoded content
-of every injection — undecodable raw octets are permitted, they exercise
-the §6.3 rejection path — and a session TC budget decremented by every
-injection (`preview_tc` exempt). A violating call returns an MCP tool
-error and injects nothing. Every tool invocation, including denied ones,
-is appended to an ops log (JSONL: tool, parameters, outcome, OBT).
+**Authority bounds (Issue 8), enforced by the Command Authorization
+Gate** (ADR-0007; §8.1 behavior untouched). Every injection — structured
+or raw — is decided by the gate on the **decoded content of its octets
+alone**, never on the invoking tool name or on operator-declared
+parameters, and the decision has exactly one of three outcomes:
+
+| Outcome | When | Effect |
+|---|---|---|
+| forward | the octets decode per §3, their (service, subtype) has an entry in the gate's classification table, the entry's authority tier is *observation* or *benign write*, the pair is within the configured allowlist, and the session TC budget is not exhausted | injected per §8.1; result as tabled above |
+| reject | the octets do not decode per §3, their (service, subtype) has no table entry, the pair is outside the configured allowlist, or the budget is exhausted | MCP tool error naming the reason; **nothing injected** |
+| confirmation required | the entry's authority tier is *state-changing write* | structured result carrying an opaque confirmation token and the decoded command; **nothing injected**. The gate forwards the injection only once a confirmation naming that token has been recorded, and then exactly once |
+
+Rejecting on a missing table entry rather than defaulting to *forward*
+is deliberate: the gate never forwards a command it could not classify
+(fail-closed, ADR-0007 C3).
+
+**The confirmation channel is not part of this contract and is not
+reachable through this interface.** No MCP tool records confirmations,
+by construction: an MCP client cannot confirm an injection it submitted,
+and the safety of a held command therefore does not depend on which
+client is attached or how it is configured. Pending holds and recorded
+confirmations do not survive a gateway restart.
+
+The session TC budget is decremented by every **forwarded** injection
+(`preview_tc` exempt; rejected and held calls consume no budget). Every
+tool invocation — forwarded, rejected and held alike — is appended to an
+ops log (JSONL: tool, parameters, gate decision, decision reason,
+authority tier, outcome, OBT).
 
 The AI client is not part of this contract: any MCP client may drive the
 gateway, and agent behavior is not specified by this ICD.
