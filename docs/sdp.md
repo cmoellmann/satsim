@@ -60,6 +60,7 @@ ADR-0002), CCSDS 133.0-B, CCSDS 301.0-B.
 | ISVV | Not applicable, **except** for the Command Authorization Gate — see the deviation row below | Cat D for the product. From M1h the CAG is engineered to the Category B technical bar per §1.1 / ADR-0007, which normally carries independent verification. |
 | Independence of verification for the CAG (Cat B) | **Deviation — no compliance claim** | Independence requirements (ISVV, verification by someone other than the developer, organizational separation) are **not satisfiable in a single-person project**. Recorded as a deviation, not a tailoring: no compliance claim is made for this requirement. ADR-0007 C9. An *AI-mediated independence* trial may be run as a documented experiment (a verification agent working only from the requirements, without access to the implementation) and is stated plainly as **not ISVV** — correlated failure modes, no organizational separation. |
 | Unit test coverage target | Indicative 80% line coverage on `pus-core`; no formal target elsewhere | Cat D; packet layer is the correctness-critical core. |
+| Coverage target for the CAG (Cat B) | **100 % statement and 100 % decision coverage on `ops-cag`**, enforced as a build-gate threshold from M1i (JaCoCo branch coverage as the decision-coverage proxy) | The Category B technical bar of §1.1 asks for it, and the CI is small and dependency-free enough that the target is achievable rather than aspirational. SIM-REQ-QA-004, SCR-011 / ADR-0007 C7. |
 | Configuration management | Git; baseline = annotated tag per milestone; ADRs immutable | Q-ST-80 CM intent met with Git-native means. |
 | NCR/problem reporting | SPR register in `docs/spr/` (§2.4, SCR-005) | Same repository-native file-plus-register mechanics as change control (§2.3); proportionate to project size. |
 
@@ -151,6 +152,7 @@ traceability matrix generated and committed, tag created, milestone checklist
 | M1f | MCP operator gateway (SCR-008): new Spring-free `mcp-gateway` module exposing the TM/TC interface as an MCP server (stdio) — PUS-level tools (`send_tc`, `preview_tc`, `send_raw_tc`, `get_packet_log`, `await_tm`), ICD/OBT/state resources, service allowlist + TC budget, ops log; ground-segment client of the web API (ICD §8.1/§8.2) behind a link-adapter seam; MCP Java SDK (MIT) added per CLAUDE.md rule 8 | SIM-TC-041..045 pass (scripted MCP client, incl. byte-identical V-TC-01 injection via `send_tc`); existing automated suite green; SRF updated with the MCP SDK dependency closure; manual demo recorded in the gate report: an AI agent performs the ping chain and the TM(1,8) recovery scenario via MCP; SRS M1f-scope requirements all traced+passed |
 | M1g | Shared-traffic console (SCR-009): every ICD §8.1 injection broadcast to all WS sessions as a new §8.2 `tc` frame kind (ICD Issue 7); console renders remote TC rows visually marked without duplicating own rows; MCP gateway buffers and serves `tc` records via `get_packet_log` | SIM-TC-046 passes (automated: passive WS session receives the `tc` frame for another client's injection, fields per §8.1; gateway `get_packet_log` returns the `tc` record); SIM-TC-047 passes (manual: remote TC rows marked, no own-row duplication); amended SIM-TC-027..029 re-verified; existing automated suite green; SRS M1g-scope requirements all traced+passed |
 | M1h | Command Authorization Gate foundation (SCR-010, ADR-0007): new JDK-only, Spring-free `ops-cag` module as a distinct configuration item engineered to the Category B technical bar (§1.1); the authorization decision moves out of the gateway's `Authority` into the gate; content-based decode-and-classify into authority tiers, fail-closed on undecodable / untabled / disallowed telecommands (ICD Issue 8 withdraws the M1f carve-out for undecodable raw octets); state-changing writes held in-gate and forwarded only against a confirmation recorded through a channel unreachable from MCP; ops log extended with decision, reason and tier | SIM-TC-048…052 pass (scripted MCP client, no AI in the loop); SIM-TC-044 passes in its amended form and SIM-TC-041…043, 045…047 pass unchanged; SIM-REQ-CAG-001 review verdict recorded; existing automated suite green; SRS M1h-scope requirements all traced+passed. The Category B verification bar itself (hazard analysis, FMEA, 100 % statement+decision coverage, robustness suite) is **M1i scope per SCR-011**, not a gate criterion here |
+| M1i | Command Authorization Gate assurance (SCR-011, ADR-0007 C7–C10): discharge the Category B technical bar on the `ops-cag` CI delivered in M1h — new controlled document `docs/safety/cag-safety-analysis.md` (SATSIM-CAG-SSA) with hazard analysis, software FMEA over the decode→classify→decide→log chain and derived safety requirements; robustness suite over every error path; 100 % statement + decision coverage on `ops-cag` enforced as a build gate; the operator-eval harness (`docs/eval/operator-eval.md`) formalizing the M1f demo into eight repeatable scenarios under the two-regime policy of §5; the executable bypass demonstration; and the AI-mediated independence experiment recorded as an experiment, **not** ISVV. No change to CAG behaviour | SIM-TC-053…060 pass; SIM-TC-048…052 pass unchanged; SIM-REQ-CAG-SAFE-001…005 and SIM-REQ-QA-004 traced+passed; the `ops-cag` coverage gate is enforced in the build and reports 100 % statement + decision; the safety analysis is committed with its FMEA-derived requirements traced to hazards; the bypass demonstration passes as a **positive** test (the direct web-API injection succeeds) and its scope statement stands in the SRS; existing automated suite green. The agent-in-the-loop scenario pass rate is **reported, not gated** (§5, ADR-0007 C10); open findings F-1/F-2 of the safety analysis are dispositioned (SPR raised or risk accepted) rather than left silent |
 | M2 | TCP length-framed space-packet link (ICD §8); ST[1] moved to M1a per SCR-002 | ICD §8 framing conformance passing (SIM-TC-015); external client demo over TCP |
 | M3 | Native OBSW demo process (small C or Rust ST[17] responder) as second OBSW target | Same SVS validation suite green against the native OBSW target unchanged |
 | M4 | Yamcs attachment trial (MDB for ST[17]/ST[1], TCP link) | TC/TM round-trip from Yamcs UI |
@@ -175,6 +177,25 @@ Claude Code working rule: one milestone = one focused session scope; see CLAUDE.
   verdict); committed per baseline.
 - Determinism policy: identical inputs ⇒ identical TM byte streams and
   timestamps (ADR-0006 C6); dedicated replay test category.
+- **Two-regime evaluation** (from M1i, ADR-0007 C10). The system has a
+  non-deterministic component — an AI operator client — and the two things it is
+  evaluated for are not evaluated the same way:
+  - **Authority boundary — deterministic, 100 %, gated.** Everything the
+    Command Authorization Gate enforces (ADR-0007 C3/C4/C5) is verified by
+    scripted tests with no AI in the loop, at 100 % statement and decision
+    coverage on `ops-cag`, and failing any of them fails the milestone gate.
+    A safety property is never established by a pass rate.
+  - **Agent behaviour — pass rate, reported, not gated.** The operator-eval
+    harness (`docs/eval/operator-eval.md`) runs scenarios with an agent in the
+    loop and reports a **binary verdict per run aggregated to a pass rate over
+    N runs**, recorded in the eval report as a **quality** metric. These runs
+    stay outside CI (cost, network, non-determinism) and are not a gate
+    criterion. The deterministic gate-enforcement assertions *inside* those
+    scenarios are ordinary SVS cases and belong to the first regime.
+
+  The separation is the point: an agent that behaves well 97 % of the time is a
+  usability result, and reporting it as a safety result would be the error the
+  gate exists to prevent.
 
 ## 6. AI-Assisted Development Policy
 
@@ -206,6 +227,8 @@ AI (Claude / Claude Code) is used as a development tool. Controls:
 | SDD | docs/sdd.md | created, Issue 1 (draft), ACT-005 |
 | SCR log + SCRs | docs/scr/ | register active, SCR-001…011 |
 | SPR log + SPRs | docs/spr/ | register created (SCR-005) |
+| CAG safety analysis (SATSIM-CAG-SSA) | docs/safety/cag-safety-analysis.md | created M1i, Issue 1 (draft) — hazard analysis, software FMEA, derived safety requirements (SCR-011) |
+| Operator-eval harness spec + independence experiment | docs/eval/ | created M1i (SCR-011); the experiment makes no independence claim |
 | SUM (user manual) | docs/sum.md | deferred to M2 |
 | SRF (software reuse file: dependencies, licenses) | docs/reuse-file.md | created |
 | Test reports | docs/test-reports/ | generated per baseline |
@@ -214,6 +237,8 @@ Consciously dropped (Cat D tailoring): separate SVerP/SValP, ISVV artifacts,
 formal review data packages, separate maintenance file (deferred until the
 product leaves PoC status). **Exception from M1h:** the Command Authorization
 Gate carries the Category B technical bar of §1.1, so its hazard analysis,
-software FMEA and robustness evidence are produced (M1i, SCR-011) and filed
-under `docs/test-reports/`. Independence remains a recorded deviation with no
+software FMEA and derived safety requirements are produced (M1i, SCR-011) as the
+controlled document `docs/safety/cag-safety-analysis.md`, with the robustness and
+coverage evidence filed per baseline under `docs/test-reports/`. Independence
+remains a recorded deviation with no
 compliance claim (§2.1) — the dropped item is ISVV, not the analysis artifacts.
