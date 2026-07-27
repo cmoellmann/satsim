@@ -75,11 +75,21 @@ public final class TraceabilityCheck {
     }
   }
 
+  /**
+   * Requirement ID grammar. The prefix is one or more uppercase segments, so
+   * both {@code SIM-REQ-CAG-001} and the two-segment {@code
+   * SIM-REQ-CAG-SAFE-001} of SCR-011 parse. A single-segment pattern silently
+   * skipped the latter — the rows were not recognized as requirement rows at
+   * all, so the SVS cases verifying them fell back to the default scope instead
+   * of failing loudly (SCR-011 §5 finding F-3).
+   */
+  private static final String REQ_ID_GRAMMAR = "SIM-REQ-[A-Z]+(?:-[A-Z]+)*-\\d+";
+
   private static final Pattern SRS_ROW =
-      Pattern.compile("^\\|\\s*(SIM-REQ-[A-Z]+-\\d+)\\s*\\|");
+      Pattern.compile("^\\|\\s*(" + REQ_ID_GRAMMAR + ")\\s*\\|");
   private static final Pattern SVS_ROW =
       Pattern.compile("^\\|\\s*(SIM-TC-\\d+)\\s*\\|");
-  private static final Pattern REQ_ID = Pattern.compile("SIM-REQ-[A-Z]+-\\d+");
+  private static final Pattern REQ_ID = Pattern.compile(REQ_ID_GRAMMAR);
   private static final Pattern TESTCASE_ANNOTATION =
       Pattern.compile("@TestCase\\(\"([^\"]+)\"\\)");
   private static final Pattern REQUIREMENT_ANNOTATION =

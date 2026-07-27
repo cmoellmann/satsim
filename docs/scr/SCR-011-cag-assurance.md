@@ -136,4 +136,45 @@ the client-agnostic conformance requirement (deferred future extension, SCR-010
 
 ## 5. Findings during implementation
 
-*(to be completed)*
+- **F-1 (from the FMEA, row FM-21) — ops-log record is not written before the
+  injection.** `Gateway.tool(...)` records the ops-log line only after the tool
+  body returns normally, and the injection happens inside that body. Two
+  consequences: an injection that succeeds and then fails downstream is logged
+  with no `gateDecision` at all (the wrapper replaces the outcome with a plain
+  error result, whose decision is `null`), and a log-write failure after a
+  successful injection loses the record entirely. SIM-REQ-CAG-SAFE-003 is
+  satisfied on every path exercised by the suite, but by sequence rather than by
+  construction. The affected code is `mcp-gateway` (Category D), not `ops-cag`.
+  Fixing it means recording the decision *before* attempting the injection —
+  a **behaviour change**, which SCR-011 §1 places outside M1i. **Disposition:
+  raise as an SPR** against the M1h baseline (SDP §2.4) and fix in a follow-up
+  increment.
+- **F-2 (from the FMEA, row FM-19) — pending holds are unbounded.** Each
+  re-submission of an unconfirmed state-changing telecommand adds a hold entry;
+  nothing evicts them. The gateway's session TC budget bounds them indirectly,
+  the gate itself imposes no bound. Availability concern (hazard H-5), not an
+  authority one — the failure direction is "everything held", not "something
+  forwarded". **Disposition: accepted risk R-3 for M1i.** A bound would change
+  gate behaviour and needs its own SCR (recorded as proposal P-2 in the safety
+  analysis).
+- **F-3 — the impact analysis was wrong about "no tool change".** §3 states that
+  the new IDs "flow through the annotation-driven matrix" with no
+  `TraceabilityCheck` change. They do not. The parser's requirement-ID grammar
+  was `SIM-REQ-[A-Z]+-\d+` — a **single** uppercase prefix segment — so the
+  two-segment `SIM-REQ-CAG-SAFE-001…005` mandated by §1 did not match. The
+  failure was silent in the worst way: the SRS rows were not recognized as
+  requirement rows at all, so the SVS cases verifying them inherited the default
+  scope M0 and were reported in scope of the **M1h** gate, which failed with
+  seven spurious findings. **Disposition: fixed in the spec PR** by widening the
+  grammar to `SIM-REQ-[A-Z]+(?:-[A-Z]+)*-\d+` in both the SRS-row and the
+  free-text requirement-reference patterns. The requirement IDs are kept exactly
+  as approved in §1; the parser was the thing that was wrong. Regression cover:
+  the M1h gate returns to 0 findings and the M1i scope now resolves the eight new
+  cases correctly.
+- **P-1 (proposal, from FMEA row FM-01).** For `send_tc` the gate classifies the
+  octets returned by the simulator's ICD §8.1 *preview* endpoint, while the
+  injection re-encodes server-side — so a Category B decision takes its input
+  from a Category D endpoint. It holds by construction today (same compose, same
+  arguments, same process) and is asserted end-to-end by SIM-TC-048. Proposed as
+  an explicit requirement rather than an inherited property; **not approved**,
+  recorded per CLAUDE.md rule 3.
