@@ -34,4 +34,70 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Category B coverage gate [SIM-REQ-QA-004, SIM-TC-060]: 100 % statement
+           and decision coverage on this CI, enforced in the build rather than
+           merely reported (SDP §2.1, ADR-0007 C7). JaCoCo branch coverage is the
+           decision-coverage proxy. Configuration only — the plugin is already
+           registered in the parent's pluginManagement and in the SRF. -->
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>test</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>check-category-b-coverage</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <rule>
+                  <element>BUNDLE</element>
+                  <limits>
+                    <!-- The recorded baseline of the safety analysis §8, acting
+                         as a no-regression ratchet [SIM-REQ-QA-004, SCR-012].
+                         100 % of *reachable* code is covered; the residue is 23
+                         instructions and 1 branch in four regions that are
+                         unreachable by construction, each itemized and
+                         justified there. JaCoCo cannot exclude a line range, so
+                         a literal 1.00 would require excluding whole classes —
+                         which for CommandAuthorizationGate would gut the very
+                         measurement this bar exists to make. Completeness of
+                         the itemization is enforced separately by SIM-TC-060,
+                         so uncovered code nobody justified fails the build. -->
+                    <limit>
+                      <counter>INSTRUCTION</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.968</minimum>
+                    </limit>
+                    <limit>
+                      <counter>BRANCH</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.982</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>
