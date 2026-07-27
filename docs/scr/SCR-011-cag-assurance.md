@@ -146,17 +146,18 @@ the client-agnostic conformance requirement (deferred future extension, SCR-010
   satisfied on every path exercised by the suite, but by sequence rather than by
   construction. The affected code is `mcp-gateway` (Category D), not `ops-cag`.
   Fixing it means recording the decision *before* attempting the injection —
-  a **behaviour change**, which SCR-011 §1 places outside M1i. **Disposition:
-  raise as an SPR** against the M1h baseline (SDP §2.4) and fix in a follow-up
-  increment.
+  a **behaviour change**, which SCR-011 §1 places outside M1i. **Disposition
+  (project lead, 2026-07-27): raised as
+  [SPR-007](../spr/SPR-007-ops-log-decision-ordering.md)** — Open, severity
+  major, against the M1h baseline (SDP §2.4); fix in a follow-up increment.
 - **F-2 (from the FMEA, row FM-19) — pending holds are unbounded.** Each
   re-submission of an unconfirmed state-changing telecommand adds a hold entry;
   nothing evicts them. The gateway's session TC budget bounds them indirectly,
   the gate itself imposes no bound. Availability concern (hazard H-5), not an
   authority one — the failure direction is "everything held", not "something
-  forwarded". **Disposition: accepted risk R-3 for M1i.** A bound would change
-  gate behaviour and needs its own SCR (recorded as proposal P-2 in the safety
-  analysis).
+  forwarded". **Disposition (project lead, 2026-07-27): accepted risk R-3 for
+  M1i, with an SCR to be raised later** for the bound itself. A bound would
+  change gate behaviour (recorded as proposal P-2 in the safety analysis).
 - **F-3 — the impact analysis was wrong about "no tool change".** §3 states that
   the new IDs "flow through the annotation-driven matrix" with no
   `TraceabilityCheck` change. They do not. The parser's requirement-ID grammar
@@ -176,5 +177,7 @@ the client-agnostic conformance requirement (deferred future extension, SCR-010
   injection re-encodes server-side — so a Category B decision takes its input
   from a Category D endpoint. It holds by construction today (same compose, same
   arguments, same process) and is asserted end-to-end by SIM-TC-048. Proposed as
-  an explicit requirement rather than an inherited property; **not approved**,
-  recorded per CLAUDE.md rule 3.
+  an explicit requirement rather than an inherited property; **not approved —
+  deferred by the project lead on 2026-07-27**, recorded per CLAUDE.md rule 3.
+  No requirement is added in M1i; the property continues to hold by construction
+  and to be asserted end-to-end by SIM-TC-048.
