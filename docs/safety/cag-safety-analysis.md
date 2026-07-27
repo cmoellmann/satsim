@@ -187,7 +187,12 @@ is not silently truncated to the requirements already agreed.
 - **P-2 (from FM-19):** the gate shall bound the number of simultaneously
   pending holds and reject further state-changing submissions once that bound is
   reached. This is a **behaviour change** and therefore explicitly outside M1i
-  (SCR-011 §1); it would need its own SCR.
+  (SCR-011 §1); it would need its own SCR. *Project lead 2026-07-27: an SCR is to
+  be raised later; the risk is accepted for M1i (F-2).*
+
+*P-1 status: deferred by the project lead on 2026-07-27 — no requirement is added
+in M1i, and the property continues to hold by construction and to be asserted
+end-to-end by SIM-TC-048.*
 
 ## 6. Residual risks, scope limits and open findings
 
@@ -214,8 +219,8 @@ places outside M1i.
 
 | ID | Finding | From | Proposed disposition |
 |---|---|---|---|
-| F-1 | The gate decision is recorded only when the tool body completes normally, and the record is written **after** the injection. An injection that succeeds and then fails downstream is logged without its `gateDecision`; a log-write failure after a successful injection loses the record entirely. SIM-REQ-CAG-SAFE-003 as derived above is satisfied on every path exercised today, but not by construction. | FM-21 | Raise as an **SPR** against the `mcp-gateway` baseline (SDP §2.4) and fix in a follow-up increment by recording the decision **before** the injection is attempted, plus a record on the exception path. Not fixed in M1i. |
-| F-2 | The gate imposes no bound on pending holds; only the gateway's session TC budget bounds them indirectly. | FM-19 | Carry as accepted risk R-3 for M1i; if a bound is wanted it needs its own SCR (proposal P-2), since it changes gate behaviour. |
+| F-1 | The gate decision is recorded only when the tool body completes normally, and the record is written **after** the injection. An injection that succeeds and then fails downstream is logged without its `gateDecision`; a log-write failure after a successful injection loses the record entirely. SIM-REQ-CAG-SAFE-003 as derived above is satisfied on every path exercised today, but not by construction. | FM-21 | **Dispositioned 2026-07-27 (project lead): raised as [SPR-007](../spr/SPR-007-ops-log-decision-ordering.md)**, Open, severity major, against the `mcp-gateway` baseline (SDP §2.4). Fix in a follow-up increment by recording the decision **before** the injection is attempted, plus a record on the exception path. Not fixed in M1i. |
+| F-2 | The gate imposes no bound on pending holds; only the gateway's session TC budget bounds them indirectly. | FM-19 | **Dispositioned 2026-07-27 (project lead): accepted risk R-3 for M1i**, with an SCR to be raised later for the bound itself (proposal P-2), since a bound changes gate behaviour. |
 
 ## 7. Verification map
 
