@@ -126,8 +126,8 @@ review only. Residual is the risk remaining after the mitigation in place at
 | ID | Failure mode | Cause | Local effect | Command-path effect | Hazard | Det. | Mitigation in place | Residual |
 |---|---|---|---|---|---|---|---|---|
 | FM-08 | Octets do not decode per ICD §3 (bad CRC, wrong PUS version, too short, length mismatch). | Corruption, client error, deliberate probe | `PacketDecodeException` | Rejected with `UNDECODABLE:` + reason; nothing injected | H-2 | T | Explicit catch ⇒ reject. ICD Issue 8 withdrew the M1f carve-out that let undecodable raw octets through | None |
-| FM-09 | Decode throws an **unchecked** exception the decoder's own guards did not catch. | `IllegalArgumentException`, `ArrayIndexOutOfBoundsException` on a structurally impossible packet | Caught | Rejected as undecodable | H-2 | T | Second catch clause, present precisely for this | None |
-| FM-10 | Decode throws an unchecked exception of **another** type (e.g. `NullPointerException`), or an `Error`. | Defect in `pus-core`, resource exhaustion | Propagates out of `decide` | The gateway's tool wrapper catches it, returns an error result, and **injects nothing** — the injection is inside the `FORWARD` branch that is never reached | H-2 | T | Fail-closed by control flow: an exception cannot produce a forward | Accountability only — the decision is lost, see FM-21 |
+| FM-09 | Decode throws an **unchecked** exception the decoder's own guards did not catch. | `IllegalArgumentException`, `ArrayIndexOutOfBoundsException` on a structurally impossible packet | Caught | Rejected as undecodable | H-2 | R | Second catch clause, present precisely for this. **Not reachable from any input today** (§8 U-1), so the mitigation is credited on review, not on test evidence; it is retained against change in `pus-core`, a separate CI | Unexercised defensive code, itemized in §8 |
+| FM-10 | Decode throws an unchecked exception of **another** type (e.g. `NullPointerException`), or an `Error`. | Defect in `pus-core`, resource exhaustion | Propagates out of `decide` | The gateway's tool wrapper catches it, returns an error result, and **injects nothing** — the injection is inside the `FORWARD` branch that is never reached | H-2 | R | Fail-closed by control flow: an exception cannot produce a forward. A control-flow argument, verified by review of the single injection call site rather than by a test | Accountability only — the decision is lost, see FM-21 |
 | FM-11 | Octets decode but are semantically invalid for the spacecraft (e.g. V-NEG-02). | Legitimate negative test, operator error | Decodes as TC(17,1), classifies benign, forwarded | The spacecraft's own rejection path runs and emits TM(1,2) | — | T | **Intended.** The gate authorizes by class, not by spacecraft-level validity; SIM-TC-049 asserts this contrast explicitly | None |
 
 ### S4–S5 — Summarize and classify (`ops-cag`)
@@ -241,8 +241,45 @@ Hazard coverage: H-1 (SAFE-001/-004), H-2 (SAFE-002), H-3 (SAFE-003), H-4
 (SAFE-001/-004), H-5 (fail-closed by design; accepted risk R-3, no requirement),
 H-6 (SAFE-005).
 
+## 8. Coverage and unreachability justification
+
+The controlled record `SIM-REQ-QA-004` points at (SCR-012). Baseline measured at
+M1i over the `ops-cag` test suite (`CommandAuthorizationGateTest`,
+`FileConfirmationChannelTest`, `CagRobustnessTest`, `CagDefensivePathsTest`):
+
+| Counter | Covered | Total | Ratio |
+|---|---|---|---|
+| Instruction | 703 | 726 | **96.83 %** |
+| Branch | 56 | 57 | **98.25 %** |
+
+**100 % of reachable code is covered.** The residue is 23 instructions and 1
+branch in four regions, itemized exhaustively below — every uncovered instruction
+and branch in the JaCoCo report appears here. The build gate is set at this
+baseline and fails below it, so coverage cannot decay silently; new uncovered
+code fails CI unless it is tested or added to this table under review.
+
+| # | Region | Uncovered | Justification |
+|---|---|---|---|
+| U-1 | `CommandAuthorizationGate:100–103` — the `IllegalArgumentException` / `ArrayIndexOutOfBoundsException` catch around `TcPacket.decode` | 10 instr | **Unreachable by construction.** `TcPacket.decode` rejects any input shorter than 13 octets before the secondary header is touched, so `TcSecondaryHeader.decode`'s own guard (`offset 6 + length 5 ≤ 13`) can never fail; every field it constructs is derived from a single octet and is therefore already inside its declared range. No octet sequence reaches this catch. **Retained deliberately:** `pus-core` is a separate configuration item that can change, and FM-09/FM-10 count this catch as the mitigation that keeps such a change fail-closed rather than forwarding. |
+| U-2 | `CommandAuthorizationGate:204–205` — the `NoSuchAlgorithmException` catch around `MessageDigest.getInstance("SHA-256")` | 7 instr | **Unreachable.** SHA-256 is mandatory on every conforming JDK; the catch exists because the JDK API declares a checked exception, not because a failure mode is anticipated. |
+| U-3 | `CagConfirm:32–33` — `main`, whose body is `System.exit(run(...))` | 6 instr | **Not coverable in-process:** invoking it terminates the test JVM. The logic it delegates to, `run(args, out, err)`, is fully covered including every usage-error and path-traversal branch — the method was extracted for exactly this reason (SCR-010). What is uncovered is the process-exit shim, which contains no decision. |
+| U-4 | `FileConfirmationChannel:53` — the `name != null` half of the entry guard | 1 branch | **Unreachable.** `Path.getFileName()` returns `null` only for a root path, and a `DirectoryStream` over a directory never yields one. The guard is a null-safety formality required by the API contract. |
+
+Two observations worth recording rather than leaving implicit:
+
+- **None of the four regions contains an authorization decision.** U-1 and U-2
+  are error handling that would fail closed if it ever ran, U-3 is a process
+  shim, U-4 is a null check. The decode → classify → decide → log chain that
+  SIM-REQ-CAG-002…006 and SIM-REQ-CAG-SAFE-001…005 constrain is covered without
+  exception.
+- **The FMEA's detection column is adjusted accordingly.** FM-09 and FM-10 are
+  marked **R** (review), not T. Both credit a mitigation that no test can
+  exercise today — an unreachable catch and a control-flow argument — and
+  leaving them as "detected by test" would overstate the evidence behind them.
+
 ## Change log
 
 | Issue | Date | Change |
 |---|---|---|
 | 1 (draft) | 2026-07-26 | Initial issue: hazard analysis H-1…H-6, software FMEA FM-01…FM-24 over the M1h baseline, derived safety requirements SIM-REQ-CAG-SAFE-001…005, proposals P-1/P-2, open findings F-1/F-2. Per SCR-011 (M1i), discharging ADR-0007 C7. |
+| 1 (draft) | 2026-07-27 | §8 added (coverage baseline and the itemized unreachability justification U-1…U-4) as the controlled record SIM-REQ-QA-004 points at, per SCR-012. FM-09 and FM-10 detection changed T → R: both credit a mitigation no test can exercise — an unreachable catch and a control-flow argument — and "detected by test" overstated the evidence. F-1 dispositioned to [SPR-007](../spr/SPR-007-ops-log-decision-ordering.md); F-2 accepted as risk R-3; P-1 deferred; P-2 to a later SCR. |
